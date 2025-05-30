@@ -1,10 +1,9 @@
 #!/bin/bash
 
-# Run SearXNG
-docker run -d --name searxng -p 8888:8888 -v ./searxng:/etc/searxng:rw searxng/searxng
+docker compose up -d searxng browserless
 
-# Run Browserless
-docker run -d --name browserless -p 3000:3000 browserless/chrome
-
-echo "SearXNG is running at http://localhost:8888"
-echo "Browserless is running at http://localhost:3000"
+echo "SearXNG is running at http://localhost:7002"
+echo "Browserless is running at http://localhost:7003"
+echo ""
+echo "You can now run the FastAPI application locally with:"
+echo "uvicorn main:app --host 0.0.0.0 --port 8000 --reload"

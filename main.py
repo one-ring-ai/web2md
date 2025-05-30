@@ -13,10 +13,9 @@ import json
 import html2text
 from youtube_transcript_api import YouTubeTranscriptApi
 import re
-# Load .env file
+
 load_dotenv()
 
-# Retrieve environment variables
 SEARXNG_URL = os.getenv('SEARXNG_URL')
 BROWSERLESS_URL = os.getenv('BROWSERLESS_URL')
 TOKEN = os.getenv('BROWSERLESS_TOKEN')
@@ -28,20 +27,14 @@ PROXY_PORT = os.getenv('PROXY_PORT')
 
 REQUEST_TIMEOUT = int(os.getenv('REQUEST_TIMEOUT', '30'))
 
-
-
-# AI Integration
 FILTER_SEARCH_RESULT_BY_AI = os.getenv('FILTER_SEARCH_RESULT_BY_AI', 'false').lower() == 'true'
 
-# AI API settings (OpenAI-compatible)
 AI_API_KEY = os.getenv('AI_API_KEY')
 AI_MODEL = os.getenv('AI_MODEL', 'gpt-3.5-turbo')
 AI_BASE_URL = os.getenv('AI_BASE_URL', 'https://api.openai.com/v1')
 
-# Domains that should only be accessed using Browserless
 domains_only_for_browserless = ["twitter", "x", "facebook", "ucarspro"]
 
-# Create FastAPI app
 app = FastAPI()
 
 HEADERS = {
@@ -62,10 +55,25 @@ def get_proxies(without=False):
     return None
 
 def fetch_content(url):
-    proxies = get_proxies()
+    proxies = get_proxies(without=True)
     def fetch_normal_content(url):
         try:
-            response = httpx.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT, proxies=proxies, follow_redirects=True)
+            # httpx uses client with proxies configuration
+            if proxies:
+                with httpx.Client(proxies=proxies) as client:
+                    response = client.get(
+                        url,
+                        headers=HEADERS,
+                        timeout=REQUEST_TIMEOUT,
+                        follow_redirects=True
+                    )
+            else:
+                response = httpx.get(
+                    url,
+                    headers=HEADERS,
+                    timeout=REQUEST_TIMEOUT,
+                    follow_redirects=True
+                )
             response.raise_for_status()
             return response.text
         except httpx.RequestError as e:
@@ -209,7 +217,11 @@ def rerenker_ai(data: Dict[str, List[dict]], max_token: int = 8000) -> List[dict
     import openai
     client = openai.OpenAI(
         api_key=AI_API_KEY,
-        base_url=AI_BASE_URL
+        base_url=AI_BASE_URL,
+        default_headers={
+            "HTTP-Referer": "https://github.com/lucanori/web2md",
+            "X-Title": "Web2MD"
+        }
     )
     model = AI_MODEL
     
@@ -256,44 +268,61 @@ def rerenker_ai(data: Dict[str, List[dict]], max_token: int = 8000) -> List[dict
 
     return {"results": filtered_results, "query": query}
 
-def searxng(query: str, categories: str = "general") -> list:
+def searxng(query: str, categories: str = "general") -> dict:
     searxng_url = f"{SEARXNG_URL}/search?q={query}&categories={categories}&format=json"
     try:
         response = httpx.get(searxng_url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
     except httpx.RequestError as e:
-        return [{"error": f"Search query failed with error: {e}"}]
+        print(f"SearXNG request error: {e}")
+        return {"results": [{"error": f"Search query failed with error: {e}"}]}
     except httpx.HTTPStatusError as e:
-        return [{"error": f"Search query failed with HTTP error: {e}"}]
+        print(f"SearXNG HTTP error: {e}")
+        return {"results": [{"error": f"Search query failed with HTTP error: {e}"}]}
 
-    search_results = response.json()
-    return search_results
+    try:
+        search_results = response.json()
+        print(f"SearXNG response structure: {type(search_results)}, keys: {search_results.keys() if isinstance(search_results, dict) else 'not a dict'}")
+        return search_results
+    except json.JSONDecodeError as e:
+        print(f"SearXNG JSON decode error: {e}")
+        return {"results": [{"error": f"Failed to parse search results: {e}"}]}
 
 def search(query: str, num_results: int, json_response: bool = False) -> list:
     search_results = searxng(query)
     if FILTER_SEARCH_RESULT_BY_AI:
-        search_results = rerenker_ai(search_results)
+        ai_input = {
+            "query": query,
+            "results": search_results["results"] if isinstance(search_results, dict) and "results" in search_results else search_results
+        }
+        search_results = rerenker_ai(ai_input)
 
     json_return = []
     markdown_return = ""
     
-    # Handle both cases: with and without AI filtering
     results_list = search_results["results"] if isinstance(search_results, dict) and "results" in search_results else search_results
     
     for result in results_list[:num_results]:
+        if not isinstance(result, dict) or "url" not in result or "title" not in result:
+            print(f"Skipping invalid result: {result}")
+            continue
+            
         url = result["url"]
         title = result["title"]
+        
         if "youtube" in url:
             video_id = re.search(r"v=([^&]+)", url)
-            if json_response:
-                json_return.append(get_transcript(video_id.group(1), "json"))
-            else:
-                markdown_return += get_transcript(video_id.group(1)) + "\n\n ---------------- \n\n"
+            if video_id:
+                if json_response:
+                    json_return.append(get_transcript(video_id.group(1), "json"))
+                else:
+                    markdown_return += get_transcript(video_id.group(1)) + "\n\n ---------------- \n\n"
             continue
+            
         html_content = fetch_content(url)
         if html_content:
             markdown_data = parse_html_to_markdown(html_content, url, title=title)
-            if markdown_data["markdown_content"].strip():  # Check if markdown content is not empty
+            if markdown_data["markdown_content"].strip():
                 if json_response:
                     json_return.append(markdown_data)
                 else:
@@ -353,7 +382,6 @@ def fetch_url(request: Request, url: str, format: str = Query("markdown", descri
         return PlainTextResponse(response_text)
     return PlainTextResponse("Failed to retrieve content")
 
-# Example usage
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

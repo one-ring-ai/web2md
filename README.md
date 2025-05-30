@@ -74,31 +74,54 @@ You can use Docker to simplify the setup process. Follow these steps:
 
 With this setup, if you change the `.env` or `main.py` file, you no longer need to restart Docker. Changes will be reloaded automatically.
 
-## Manual Setup
+## Local Development Setup
 
-Follow these steps for manual setup:
+For local development, we recommend using `uv` (a fast Python package manager) instead of traditional `pip` and `virtualenv`:
 
-1. **Clone the repository**:
+### Prerequisites
+- Python 3.11+
+- uv package manager
+
+### Installation
+
+1. **Install uv** (if not already installed):
+    ```sh
+    # Linux/macOS
+    curl -Ls https://astral.sh/uv/install.sh | sh
+    
+    # Windows (PowerShell)
+    irm https://astral.sh/uv/install.ps1 | iex
+    
+    # Using pip (any platform)
+    pip install uv
+    ```
+
+2. **Clone the repository**:
     ```sh
     git clone https://github.com/lucanori/web2md.git
     cd web2md
     ```
 
-2. **Create and activate virtual environment**:
+3. **Create and activate virtual environment**:
     ```sh
-    virtualenv venv
-    source venv/bin/activate
+    # Create virtual environment
+    uv venv
+    
+    # Activate environment
+    source .venv/bin/activate  # Linux/macOS
+    .\.venv\Scripts\activate   # Windows
     ```
 
-3. **Install dependencies**:
+4. **Install dependencies**:
     ```sh
-    pip install -r requirements.txt
+    uv pip install -r requirements.txt
     ```
 
-4. **Create a .env file** in the root directory with the following content:
+5. **Create a .env file** in the root directory with the following content:
     ```bash
-    SEARXNG_URL=http://searxng:8080
-    BROWSERLESS_URL=http://browserless:3000
+    # For local development (when running FastAPI locally)
+    SEARXNG_URL=http://localhost:7002
+    BROWSERLESS_URL=http://localhost:7003
     BROWSERLESS_TOKEN=your_browserless_token_here  # Replace with your actual token
     # PROXY_PROTOCOL=http
     # PROXY_URL=your_proxy_url
@@ -121,15 +144,22 @@ Follow these steps for manual setup:
     # LM Studio: AI_BASE_URL=http://localhost:1234/v1
     ```
 
-5. **Run Docker containers for SearXNG and Browserless**:
+6. **Run Docker containers for SearXNG and Browserless**:
     ```sh
     ./run-services.sh
     ```
 
-6. **Start the FastAPI application**:
+7. **Start the FastAPI application**:
     ```sh
-    uvicorn main:app --host 0.0.0.0 --port 7001
+    uvicorn main:app --host 0.0.0.0 --port 7001 --reload
     ```
+
+### Development Tips
+
+- **Auto-reload**: Use `--reload` flag with uvicorn for automatic reloading during development
+- **Fast dependency updates**: Use `uv pip install package_name` for quick package installation
+- **Environment management**: uv creates lightweight virtual environments (~12ms vs 500ms-2s with traditional tools)
+- **Cross-platform compatibility**: Use `uv pip compile requirements.in --universal` for platform-independent requirements
 
 ## Usage
 
