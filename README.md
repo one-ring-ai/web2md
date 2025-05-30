@@ -110,8 +110,8 @@ Follow these steps for manual setup:
     # AI Integration for search result filter (OpenAI-compatible APIs)
     FILTER_SEARCH_RESULT_BY_AI=true
     AI_API_KEY=your_api_key_here
-    AI_MODEL=gpt-3.5-turbo
-    AI_BASE_URL=https://api.openai.com/v1
+    AI_MODEL=google/gemini-2.5-flash-preview-05-20
+    AI_BASE_URL=https://openrouter.ai/api/v1
 
     # Examples for different providers:
     # OpenAI: AI_BASE_URL=https://api.openai.com/v1
@@ -128,7 +128,7 @@ Follow these steps for manual setup:
 
 6. **Start the FastAPI application**:
     ```sh
-    uvicorn main:app --host 0.0.0.0 --port 8000
+    uvicorn main:app --host 0.0.0.0 --port 7001
     ```
 
 ## Usage
@@ -139,8 +139,8 @@ To perform a search query, send a GET request to the root endpoint `/` with the 
 
 Example:
 ```sh
-curl "http://localhost:8000/?q=python&num_results=5&format=json" # for JSON format
-curl "http://localhost:8000/?q=python&num_results=5" # by default Markdown
+curl "http://localhost:7001/?q=python&num_results=5&format=json" # for JSON format
+curl "http://localhost:7001/?q=python&num_results=5" # by default Markdown
 ```
 
 ### Fetch URL Content
@@ -149,8 +149,8 @@ To fetch and convert the content of a specific URL to Markdown, send a GET reque
 
 Example:
 ```sh
-curl "http://localhost:8000/r/https://example.com&format=json" # for JSON format
-curl "http://localhost:8000/r/https://example.com" # by default Markdown
+curl "http://localhost:7001/r/https://example.com&format=json" # for JSON format
+curl "http://localhost:7001/r/https://example.com" # by default Markdown
 ```
 
 ### Fetching Images
@@ -159,7 +159,7 @@ To fetch image search results, send a GET request to the `/images` endpoint with
 
 Example:
 ```sh
-curl "http://localhost:8000/images?q=puppies&num_results=5"
+curl "http://localhost:7001/images?q=puppies&num_results=5"
 ```
 
 ### Fetching Videos
@@ -168,12 +168,8 @@ To fetch video search results, send a GET request to the `/videos` endpoint with
 
 Example:
 ```sh
-curl "http://localhost:8000/videos?q=cooking+recipes&num_results=5"
+curl "http://localhost:7001/videos?q=cooking+recipes&num_results=5"
 ```
-
-## Using Proxies
-
-This project uses Geonode proxies for web scraping. You can use [my Geonode affiliate link](https://geonode.com/invite/47389) to get started with their proxy services.
 
 ## Roadmap
 
@@ -192,7 +188,7 @@ For a detailed explanation of the code, visit the article [here](https://www.ess
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the GPLv3 License. See the [LICENSE](LICENSE) file for details.
 
 ## Author
 

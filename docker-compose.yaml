@@ -1,9 +1,11 @@
 services:
-  search-webscraper-markdown:
+  web2md:
     image: ghcr.io/lucanori/web2md:rolling
-    container_name: search-webscraper-markdown
+    container_name: web2md
+    networks:
+      - web2md
     ports:
-      - "8000:8000"
+      - "7001:8000"
     depends_on:
       - searxng
       - browserless
@@ -13,9 +15,9 @@ services:
     image: docker.io/searxng/searxng:latest
     restart: unless-stopped
     networks:
-      - default
+      - web2md
     ports:
-      - "8080:8080"
+      - "7002:8080"
     volumes:
       - ./searxng:/etc/searxng:rw
 
@@ -24,9 +26,9 @@ services:
     image: ghcr.io/browserless/chromium
     restart: unless-stopped
     networks:
-      - default
+      - web2md
     ports:
-      - "3000:3000"
+      - "7003:3000"
     environment:
       - TOKEN=${BROWSERLESS_TOKEN}
       - MAX_CONCURRENT_SESSIONS=10
@@ -34,5 +36,5 @@ services:
       - QUEUED=10
 
 networks:
-  default:
+  web2md:
     driver: bridge

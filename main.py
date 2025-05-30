@@ -129,7 +129,6 @@ def get_transcript(video_id: str, format: str = "markdown"):
         transcript_list = YouTubeTranscriptApi.get_transcript(video_id, proxies=get_proxies(without=True))
         transcript = " ".join([entry['text'] for entry in transcript_list])
 
-        # Fetch the title from the video page
         video_url = f"https://www.youtube.com/watch?v={video_id}"
         video_page = fetch_content(video_url)
         title = extract_title(video_page)
@@ -150,11 +149,9 @@ def extract_title(html_content):
 def clean_html(html):
     soup = BeautifulSoup(html, 'html.parser')
     
-    # Remove all script, style, and other unnecessary elements
     for script_or_style in soup(["script", "style", "header", "footer", "noscript", "form", "input", "textarea", "select", "option", "button", "svg", "iframe", "object", "embed", "applet", "nav", "navbar"]):
         script_or_style.decompose()
 
-    # remove ids "layers"
     ids = ['layers']
     
     for id_ in ids:
@@ -162,11 +159,9 @@ def clean_html(html):
         if tag:
             tag.decompose()
     
-    # Remove unwanted classes and ids
     for tag in soup.find_all(True):
         tag.attrs = {key: value for key, value in tag.attrs.items() if key not in ['class', 'id', 'style']}
     
-    # Remove comments
     for comment in soup.find_all(string=lambda text: isinstance(text, Comment)):
         comment.extract()
     
@@ -176,16 +171,14 @@ def parse_html_to_markdown(html, url, title=None):
     cleaned_html = clean_html(html)
     title_ = title or extract_title(html)
 
-    # Convert the extracted HTML to Markdown
     text_maker = html2text.HTML2Text()
-    text_maker.ignore_links = False  # Include links
+    text_maker.ignore_links = False
     text_maker.ignore_tables = False
-    text_maker.bypass_tables = False  # Format tables in Markdown
-    text_maker.ignore_images = False  # Include images
-    text_maker.protect_links = True   # Protect links from line breaks
-    text_maker.mark_code = True       # Mark code with [code]...[/code] blocks
+    text_maker.bypass_tables = False
+    text_maker.ignore_images = False
+    text_maker.protect_links = True
+    text_maker.mark_code = True
     
-    # Convert HTML to Markdown
     markdown_content = text_maker.handle(cleaned_html)
     
     return {
@@ -194,7 +187,7 @@ def parse_html_to_markdown(html, url, title=None):
         "markdown_content": markdown_content
     }
 
-def rerenker_ai(data: Dict[str, List[dict]], max_token: int = 2000) -> List[dict]:
+def rerenker_ai(data: Dict[str, List[dict]], max_token: int = 8000) -> List[dict]:
     client = None
     model = None
     class ResultItem(BaseModel):
@@ -283,7 +276,11 @@ def search(query: str, num_results: int, json_response: bool = False) -> list:
 
     json_return = []
     markdown_return = ""
-    for result in search_results["results"][:num_results]:
+    
+    # Handle both cases: with and without AI filtering
+    results_list = search_results["results"] if isinstance(search_results, dict) and "results" in search_results else search_results
+    
+    for result in results_list[:num_results]:
         url = result["url"]
         title = result["title"]
         if "youtube" in url:
@@ -317,7 +314,8 @@ def get_search_images(
     num_results: int = Query(5, description="Number of results")
     ):
     result_list = searxng(q, categories="images")
-    return JSONResponse(result_list["results"][:num_results])
+    results = result_list["results"] if isinstance(result_list, dict) and "results" in result_list else result_list
+    return JSONResponse(results[:num_results])
 
 @app.get("/videos")
 def get_search_videos(
@@ -325,7 +323,8 @@ def get_search_videos(
     num_results: int = Query(5, description="Number of results")
     ):
     result_list = searxng(q, categories="videos")
-    return JSONResponse(result_list["results"][:num_results])
+    results = result_list["results"] if isinstance(result_list, dict) and "results" in result_list else result_list
+    return JSONResponse(results[:num_results])
 
 @app.get("/")
 def get_search_results(
