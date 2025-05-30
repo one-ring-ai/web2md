@@ -19,7 +19,7 @@ load_dotenv()
 # Retrieve environment variables
 SEARXNG_URL = os.getenv('SEARXNG_URL')
 BROWSERLESS_URL = os.getenv('BROWSERLESS_URL')
-TOKEN = os.getenv('TOKEN')
+TOKEN = os.getenv('BROWSERLESS_TOKEN')
 PROXY_PROTOCOL = os.getenv('PROXY_PROTOCOL', 'http')
 PROXY_URL = os.getenv('PROXY_URL')
 PROXY_USERNAME = os.getenv('PROXY_USERNAME')
@@ -32,7 +32,11 @@ REQUEST_TIMEOUT = int(os.getenv('REQUEST_TIMEOUT', '30'))
 
 # AI Integration
 FILTER_SEARCH_RESULT_BY_AI = os.getenv('FILTER_SEARCH_RESULT_BY_AI', 'false').lower() == 'true'
-AI_ENGINE = os.getenv('AI_ENGINE', 'openai')
+
+# AI API settings (OpenAI-compatible)
+AI_API_KEY = os.getenv('AI_API_KEY')
+AI_MODEL = os.getenv('AI_MODEL', 'gpt-3.5-turbo')
+AI_BASE_URL = os.getenv('AI_BASE_URL', 'https://api.openai.com/v1')
 
 # Domains that should only be accessed using Browserless
 domains_only_for_browserless = ["twitter", "x", "facebook", "ucarspro"]
@@ -206,15 +210,15 @@ def rerenker_ai(data: Dict[str, List[dict]], max_token: int = 2000) -> List[dict
         f' Return the results in same JSON format as you would be given, the JSON object must use the schema: {json.dumps(SearchResult.schema())}'
     )
     
-    if AI_ENGINE == "groq":
-        from groq import Groq
-        client = Groq()
-        model = os.getenv('GROQ_MODEL', 'llama3-8b-8192')
-
-    else:
-        import openai
-        client = openai
-        model = os.getenv('OPENAI_MODEL', 'gpt-3.5-turbo-0125')
+    if not AI_API_KEY or not AI_BASE_URL:
+        raise ValueError("AI_API_KEY and AI_BASE_URL must be set for AI integration")
+    
+    import openai
+    client = openai.OpenAI(
+        api_key=AI_API_KEY,
+        base_url=AI_BASE_URL
+    )
+    model = AI_MODEL
     
     filtered_results = []
     batch_size = 10

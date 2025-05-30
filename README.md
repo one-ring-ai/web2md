@@ -1,15 +1,15 @@
-# Jina.ai Alternative Search Result Scraper with Markdown Output Using FastAPI, SearXNG, Browserless, and AI Integration
+# Web2MD - Web Content to Markdown Converter
 
-English | [中文版](README_zh.md)
+English
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: AGPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 ## Description
 
-This project provides a powerful web scraping tool that fetches search results and converts them into Markdown format using FastAPI, SearXNG, and Browserless. It includes the capability to use proxies for web scraping and handles HTML content conversion to Markdown efficiently. Now featuring AI Integration for filtering search results. Alternatives include Jina.ai, FireCrawl AI, Exa AI, and 2markdown, offering various web scraping and search engine solutions for developers.
+Web2MD is a powerful web scraping tool that fetches search results and converts web content into clean Markdown format using FastAPI, SearXNG, and Browserless. It includes the capability to use proxies for web scraping and handles HTML content conversion to Markdown efficiently. Features AI Integration for filtering search results using OpenAI-compatible APIs. Alternatives include Jina.ai, FireCrawl AI, Exa AI, and 2markdown, offering various web scraping and search engine solutions for developers.
 
 ## Table of Contents
-- [Jina.ai Alternative Search Result Scraper with Markdown Output Using FastAPI, SearXNG, Browserless, and AI Integration](#jinaai-alternative-search-result-scraper-with-markdown-output-using-fastapi-searxng-browserless-and-ai-integration)
+- [Web2MD - Web Content to Markdown Converter](#web2md---web-content-to-markdown-converter)
   - [Description](#description)
   - [Table of Contents](#table-of-contents)
   - [Alternatives:](#alternatives)
@@ -63,8 +63,8 @@ You can use Docker to simplify the setup process. Follow these steps:
 
 1. **Clone the repository**:
     ```sh
-    git clone https://github.com/essamamdani/search-result-scraper-markdown.git
-    cd search-result-scraper-markdown
+    git clone https://github.com/lucanori/web2md.git
+    cd web2md
     ```
 
 2. **Run Docker Compose**:
@@ -80,8 +80,8 @@ Follow these steps for manual setup:
 
 1. **Clone the repository**:
     ```sh
-    git clone https://github.com/essamamdani/search-result-scraper-markdown.git
-    cd search-result-scraper-markdown
+    git clone https://github.com/lucanori/web2md.git
+    cd web2md
     ```
 
 2. **Create and activate virtual environment**:
@@ -99,7 +99,7 @@ Follow these steps for manual setup:
     ```bash
     SEARXNG_URL=http://searxng:8080
     BROWSERLESS_URL=http://browserless:3000
-    TOKEN=your_browserless_token_here  # Replace with your actual token
+    BROWSERLESS_TOKEN=your_browserless_token_here  # Replace with your actual token
     # PROXY_PROTOCOL=http
     # PROXY_URL=your_proxy_url
     # PROXY_USERNAME=your_proxy_username
@@ -107,15 +107,18 @@ Follow these steps for manual setup:
     # PROXY_PORT=your_proxy_port
     REQUEST_TIMEOUT=30
 
-    # AI Integration for search result filter
+    # AI Integration for search result filter (OpenAI-compatible APIs)
     FILTER_SEARCH_RESULT_BY_AI=true
-    AI_ENGINE=groq
-    # GROQ
-    GROQ_API_KEY=yours_groq_api_key_here
-    GROQ_MODEL=llama3-8b-8192
-    # OPENAI
-    # OPENAI_API_KEY=your_openai_api_key_here
-    # OPENAI_MODEL=gpt-3.5-turbo-0125
+    AI_API_KEY=your_api_key_here
+    AI_MODEL=gpt-3.5-turbo
+    AI_BASE_URL=https://api.openai.com/v1
+
+    # Examples for different providers:
+    # OpenAI: AI_BASE_URL=https://api.openai.com/v1
+    # GROQ: AI_BASE_URL=https://api.groq.com/openai/v1
+    # OpenRouter: AI_BASE_URL=https://openrouter.ai/api/v1
+    # Ollama: AI_BASE_URL=http://localhost:11434/v1
+    # LM Studio: AI_BASE_URL=http://localhost:1234/v1
     ```
 
 5. **Run Docker containers for SearXNG and Browserless**:
@@ -193,7 +196,9 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## Author
 
-Essa Mamdani - [essamamdani.com](https://essamamdani.com)
+Luca Nori - [lucanori](https://github.com/lucanori)
+
+Original work by Essa Mamdani - [essamamdani.com](https://essamamdani.com)
 
 ## Contributing
 
@@ -207,4 +212,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=essamamdani/search-result-scraper-markdown&type=Date)](https://star-history.com/#essamamdani/search-result-scraper-markdown&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=lucanori/web2md&type=Date)](https://star-history.com/#lucanori/web2md&Date)

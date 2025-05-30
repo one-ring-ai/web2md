@@ -1,16 +1,12 @@
 services:
   search-webscraper-markdown:
-    build:
-      context: .
-      dockerfile: Dockerfile  # This refers to your Python FastAPI Dockerfile
+    image: ghcr.io/lucanori/web2md:rolling
     container_name: search-webscraper-markdown
     ports:
       - "8000:8000"
     depends_on:
       - searxng
       - browserless
-    volumes:
-      - .:/app 
     
   searxng:
     container_name: searxng
@@ -32,7 +28,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - TOKEN=your_browserless_token_here  # Replace with your actual token
+      - TOKEN=${BROWSERLESS_TOKEN}
       - MAX_CONCURRENT_SESSIONS=10
       - TIMEOUT=60000
       - QUEUED=10
