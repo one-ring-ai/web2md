@@ -1,0 +1,65 @@
+# see https://docs.searxng.org/admin/settings/settings.html#settings-use-default-settings
+use_default_settings: true
+
+server:
+  secret_key: "f9e603d4191caab069b021fa0568391a33c8a837b470892c64461b5dd12464f4"
+  limiter: false
+  image_proxy: true
+  port: 8080
+  bind_address : "0.0.0.0"
+
+ui:
+  static_use_hash: true
+search:
+  safe_search: 0
+  autocomplete: ""
+  default_lang: ""
+  formats:
+    - html
+    - json
+
+# communication with search engines
+#
+outgoing:
+  # default timeout in seconds, can be override by engine
+  request_timeout: 10.0
+  # the maximum timeout in seconds
+  max_request_timeout: 30.0
+  # suffix of searx_useragent, could contain information like an email address
+  # to the administrator
+  useragent_suffix: ""
+  # The maximum number of concurrent connections that may be established.
+  pool_connections: 100
+  # Allow the connection pool to maintain keep-alive connections below this
+  # point.
+  pool_maxsize: 20
+  # See https://www.python-httpx.org/http2/
+  enable_http2: true
+  # uncomment below section if you want to use a proxyq see: SOCKS proxies
+  #   https://2.python-requests.org/en/latest/user/advanced/#proxies
+  # are also supported: see
+  #   https://2.python-requests.org/en/latest/user/advanced/#socks
+  #
+  # proxies:
+  #   all://:
+  #     - http://example.com:9090
+      
+
+  # using_tor_proxy: false
+  #
+  # Extra seconds to add in order to account for the time taken by the proxy
+  #
+  #  extra_proxy_timeout: 10.0
+ 
+
+engines:
+  - name: soundcloud
+    engine: soundcloud
+    shortcut: sc
+    disabled: true 
+
+  - name: wikidata
+    engine: wikidata
+    timeout: 30  # Increase timeout to 30 seconds
+    shortcut: wd
+    categories: general

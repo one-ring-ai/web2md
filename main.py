@@ -134,7 +134,16 @@ def fetch_content(url):
 
 def get_transcript(video_id: str, format: str = "markdown"):
     try:
-        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, proxies=get_proxies(without=True))
+        # Get proxies for YouTube transcript API
+        proxies = get_proxies(without=True)
+        if proxies:
+            try:
+                transcript_list = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies)
+            except TypeError:
+                # Fallback if proxies parameter is not supported
+                transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+        else:
+            transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
         transcript = " ".join([entry['text'] for entry in transcript_list])
 
         video_url = f"https://www.youtube.com/watch?v={video_id}"

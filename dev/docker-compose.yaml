@@ -25,6 +25,8 @@ services:
     restart: unless-stopped
     networks:
       - web2md
+    ports:
+      - "7002:8080"
     volumes:
       - ./searxng:/etc/searxng:rw
 
@@ -34,6 +36,8 @@ services:
     restart: unless-stopped
     networks:
       - web2md
+    ports:
+      - "7003:3000"
     environment:
       - TOKEN=${BROWSERLESS_TOKEN}
       - MAX_CONCURRENT_SESSIONS=10
