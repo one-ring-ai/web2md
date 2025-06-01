@@ -1,8 +1,6 @@
 # Web2MD - Web Content to Markdown Converter
 
-English
-
-[![License: AGPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 ## Description
 
@@ -16,20 +14,18 @@ Web2MD is a powerful web scraping tool that fetches search results and converts 
   - [Features](#features)
   - [Prerequisites](#prerequisites)
   - [Docker Setup](#docker-setup)
-  - [Manual Setup](#manual-setup)
+  - [Local Development Setup](#local-development-setup)
   - [Usage](#usage)
     - [Search Endpoint](#search-endpoint)
     - [Fetch URL Content](#fetch-url-content)
     - [Fetching Images](#fetching-images)
     - [Fetching Videos](#fetching-videos)
-  - [Using Proxies](#using-proxies)
+  - [Token Usage Control](#token-usage-control)
   - [Roadmap](#roadmap)
-  - [Code Explanation](#code-explanation)
   - [License](#license)
   - [Author](#author)
   - [Contributing](#contributing)
   - [Acknowledgements](#acknowledgements)
-  - [Star History](#star-history)
 
 ## Alternatives:
 
@@ -48,6 +44,8 @@ Web2MD is a powerful web scraping tool that fetches search results and converts 
 - **AI Integration (Reranker AI)**: Filters search results using AI to provide the most relevant content.
 - **YouTube Transcriptions**: Fetches YouTube video transcriptions.
 - **Image and Video Search**: Fetches images and video results using SearXNG.
+- **Token Usage Control**: Configurable limits for images and content to manage token consumption.
+- **Development Environment**: Separate dev environment with dedicated scripts and configuration.
 
 ## Prerequisites
 
@@ -61,18 +59,10 @@ Ensure you have the following installed:
 
 You can use Docker to simplify the setup process. Follow these steps:
 
-1. **Clone the repository**:
+1. **Run Docker Compose**:
     ```sh
-    git clone https://github.com/lucanori/web2md.git
-    cd web2md
+    docker compose up -d
     ```
-
-2. **Run Docker Compose**:
-    ```sh
-    docker compose up --build
-    ```
-
-With this setup, if you change the `.env` or `main.py` file, you no longer need to restart Docker. Changes will be reloaded automatically.
 
 ## Local Development Setup
 
@@ -130,6 +120,11 @@ For local development, we recommend using `uv` (a fast Python package manager) i
     # PROXY_PORT=your_proxy_port
     REQUEST_TIMEOUT=30
 
+    # Websites processing limits
+    MAX_IMAGES_PER_SITE=0 # For llms: images increase by a lot input tokens
+    MIN_IMAGE_SIZE=256
+    MAX_TOKENS_PER_REQUEST=100000
+
     # AI Integration for search result filter (OpenAI-compatible APIs)
     FILTER_SEARCH_RESULT_BY_AI=true
     AI_API_KEY=your_api_key_here
@@ -146,12 +141,12 @@ For local development, we recommend using `uv` (a fast Python package manager) i
 
 6. **Run Docker containers for SearXNG and Browserless**:
     ```sh
-    ./run-services.sh
+    sh dev/run-services.sh
     ```
 
 7. **Start the FastAPI application**:
     ```sh
-    uvicorn main:app --host 0.0.0.0 --port 7001 --reload
+    uvicorn main:app --host 0.0.0.0 --port 7001 --reload --env-file dev/.env
     ```
 
 ### Development Tips
@@ -186,6 +181,7 @@ curl "http://localhost:7001/r/https://example.com" # by default Markdown
 ### Fetching Images
 
 To fetch image search results, send a GET request to the `/images` endpoint with the query parameters `q` (search query) and `num_results` (number of results).
+Note that you have to enable image processing in the `.env` file.
 
 Example:
 ```sh
@@ -201,6 +197,51 @@ Example:
 curl "http://localhost:7001/videos?q=cooking+recipes&num_results=5"
 ```
 
+## Token Usage Control
+
+Web2MD includes configurable limits to manage token consumption when processing websites with many images or large amounts of content. This is particularly important when using the output with LLMs that have token limits.
+
+### Configuration Options
+
+- `MAX_IMAGES_PER_SITE=3` - Maximum number of images to process per website (set to 0 to disable images completely)
+- `MIN_IMAGE_SIZE=256` - Minimum image size in pixels (256x256px) to filter out small icons and decorative images
+- `MAX_TOKENS_PER_REQUEST=100000` - Maximum tokens per request before content is truncated, useful for llms
+
+### Token Usage Estimates
+
+Based on our testing with 20 different queries, here are rough estimates for token usage:
+
+**Normal Websites** (news, general content):
+- Average: ~28,200 tokens per query
+- Range: 14,700 - 51,500 tokens
+- Examples: News articles, blog posts, general information sites
+
+**Documentation Websites** (technical content):
+- Average: ~19,100 tokens per query
+- Range: 3,700 - 48,300 tokens
+- Examples: Programming tutorials, API documentation, technical guides
+
+**Important Notes:**
+- These are rough estimates and token usage can vary significantly
+- Individual results can range from 3,700 tokens (simple docs) to 51,500 tokens (complex articles)
+- For example: pandas tutorial used ~48,000 tokens while TypeScript interfaces guide used only ~7,800 tokens
+- See `test/token_usage_results.json` for detailed test results
+
+### Testing Token Usage
+
+You can run your own token usage tests:
+
+```bash
+# Start web2md
+sh dev/run-services.sh
+uvicorn main:app --host 0.0.0.0 --port 7001 --reload --env-file dev/.env
+
+# Run token usage test
+sh test/run_test.sh
+```
+
+The test will process various queries and provide detailed statistics about token usage patterns.
+
 ## Roadmap
 
 - [x] **FastAPI**: A modern, fast web framework for building APIs with Python.
@@ -211,10 +252,10 @@ curl "http://localhost:7001/videos?q=cooking+recipes&num_results=5"
 - [x] **AI Integration (Reranker AI)**: Filters search results using AI to provide the most relevant content.
 - [x] **YouTube Transcriptions**: Fetches YouTube video transcriptions.
 - [x] **Image and Video Search**: Fetches images and video results using SearXNG.
-
-## Code Explanation
-
-For a detailed explanation of the code, visit the article [here](https://www.essamamdani.com/search-result-scraper-markdown).
+- [x] **Token Usage Control**: Configurable limits for images and content to manage token consumption.
+- [x] **Development Environment**: Separate dev environment with dedicated scripts and configuration.
+- [x] **Token Usage Testing**: Automated testing suite to measure and analyze token consumption patterns.
+- [ ] **Whisper STT Integration for videos**: Integrates Whisper STT for more accurate transcriptions in video search results.
 
 ## License
 
@@ -224,7 +265,7 @@ This project is licensed under the GPLv3 License. See the [LICENSE](LICENSE) fil
 
 Luca Nori - [lucanori](https://github.com/lucanori)
 
-Original work by Essa Mamdani - [essamamdani.com](https://essamamdani.com)
+Original work by Essa Mamdani - [search-result-scraper-markdown](https://github.com/essamamdani/search-result-scraper-markdown)
 
 ## Contributing
 
@@ -235,7 +276,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - [FastAPI](https://fastapi.tiangolo.com/)
 - [SearXNG](https://github.com/searxng/searxng)
 - [Browserless](https://www.browserless.io/)
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=lucanori/web2md&type=Date)](https://star-history.com/#lucanori/web2md&Date)

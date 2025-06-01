@@ -33,6 +33,10 @@ AI_API_KEY = os.getenv('AI_API_KEY')
 AI_MODEL = os.getenv('AI_MODEL', 'gpt-3.5-turbo')
 AI_BASE_URL = os.getenv('AI_BASE_URL', 'https://api.openai.com/v1')
 
+MAX_IMAGES_PER_SITE = int(os.getenv('MAX_IMAGES_PER_SITE', '3'))
+MIN_IMAGE_SIZE = int(os.getenv('MIN_IMAGE_SIZE', '256'))
+MAX_TOKENS_PER_REQUEST = int(os.getenv('MAX_TOKENS_PER_REQUEST', '100000'))
+
 domains_only_for_browserless = ["twitter", "x", "facebook", "ucarspro"]
 
 app = FastAPI()
@@ -58,7 +62,6 @@ def fetch_content(url):
     proxies = get_proxies(without=True)
     def fetch_normal_content(url):
         try:
-            # httpx uses client with proxies configuration
             if proxies:
                 with httpx.Client(proxies=proxies) as client:
                     response = client.get(
@@ -134,13 +137,11 @@ def fetch_content(url):
 
 def get_transcript(video_id: str, format: str = "markdown"):
     try:
-        # Get proxies for YouTube transcript API
         proxies = get_proxies(without=True)
         if proxies:
             try:
                 transcript_list = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies)
             except TypeError:
-                # Fallback if proxies parameter is not supported
                 transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
         else:
             transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
@@ -184,8 +185,62 @@ def clean_html(html):
     
     return str(soup)
 
+def estimate_tokens(text):
+    return len(text) // 4
+
+def filter_images_by_size_and_limit(html, base_url):
+    """Filter images by size and limit the number of images"""
+    from bs4 import BeautifulSoup
+    from urllib.parse import urljoin, urlparse
+    
+    soup = BeautifulSoup(html, 'html.parser')
+    images = soup.find_all('img')
+    
+    if MAX_IMAGES_PER_SITE == 0:
+        for img in images:
+            img.decompose()
+        return str(soup)
+    
+    valid_images = []
+    
+    for img in images:
+        if len(valid_images) >= MAX_IMAGES_PER_SITE:
+            break
+            
+        src = img.get('src')
+        if not src:
+            continue
+            
+        if src.startswith('//'):
+            src = 'https:' + src
+        elif src.startswith('/'):
+            parsed_base = urlparse(base_url)
+            base_domain = f"{parsed_base.scheme}://{parsed_base.netloc}"
+            src = urljoin(base_domain, src)
+        
+        width = img.get('width')
+        height = img.get('height')
+        
+        if width and height:
+            try:
+                w, h = int(width), int(height)
+                if w >= MIN_IMAGE_SIZE and h >= MIN_IMAGE_SIZE:
+                    valid_images.append(img)
+                    continue
+            except (ValueError, TypeError):
+                pass
+        
+        valid_images.append(img)
+    
+    for img in images:
+        if img not in valid_images:
+            img.decompose()
+    
+    return str(soup)
+
 def parse_html_to_markdown(html, url, title=None):
     cleaned_html = clean_html(html)
+    filtered_html = filter_images_by_size_and_limit(cleaned_html, url)
     title_ = title or extract_title(html)
 
     text_maker = html2text.HTML2Text()
@@ -196,7 +251,13 @@ def parse_html_to_markdown(html, url, title=None):
     text_maker.protect_links = True
     text_maker.mark_code = True
     
-    markdown_content = text_maker.handle(cleaned_html)
+    markdown_content = text_maker.handle(filtered_html)
+    
+    estimated_tokens = estimate_tokens(markdown_content)
+    if estimated_tokens > MAX_TOKENS_PER_REQUEST:
+        max_chars = MAX_TOKENS_PER_REQUEST * 4
+        markdown_content = markdown_content[:max_chars] + "\n\n[Content truncated due to token limit]"
+        print(f"Content truncated: {estimated_tokens} tokens estimated, limit is {MAX_TOKENS_PER_REQUEST}")
     
     return {
         "title": title_,

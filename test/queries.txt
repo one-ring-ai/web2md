@@ -1,0 +1,23 @@
+# Normal Web Search Queries
+best restaurants in rome
+climate change effects 2024
+how to fix washing machine
+latest tech news
+bitcoin price prediction
+healthy breakfast recipes
+travel tips for japan
+best programming languages 2024
+electric car reviews
+home workout routines
+
+# Documentation/Technical Queries
+how to deploy daisyui with 11ty
+pandas dataframe tutorial
+react hooks useEffect
+docker compose best practices
+typescript interfaces vs types
+mongodb aggregation pipeline
+nextjs app router guide
+tailwind css grid layout
+python async await tutorial
+kubernetes deployment yaml

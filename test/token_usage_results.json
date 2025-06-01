@@ -1,0 +1,168 @@
+{
+  "timestamp": "2025-06-01 14:22:51",
+  "configuration": {
+    "web2md_url": "http://localhost:7001",
+    "num_results_per_query": 3,
+    "delay_between_requests": 2
+  },
+  "normal_websites": {
+    "category": "Normal",
+    "total_queries": 10,
+    "successful_requests": 10,
+    "failed_requests": 0,
+    "total_tokens": 282275,
+    "average_tokens_per_query": 28227.5,
+    "results": [
+      {
+        "query": "best restaurants in rome",
+        "success": true,
+        "response_length": 138239,
+        "estimated_tokens": 34559,
+        "status_code": 200
+      },
+      {
+        "query": "climate change effects 2024",
+        "success": true,
+        "response_length": 206046,
+        "estimated_tokens": 51511,
+        "status_code": 200
+      },
+      {
+        "query": "how to fix washing machine",
+        "success": true,
+        "response_length": 157606,
+        "estimated_tokens": 39401,
+        "status_code": 200
+      },
+      {
+        "query": "latest tech news",
+        "success": true,
+        "response_length": 58743,
+        "estimated_tokens": 14685,
+        "status_code": 200
+      },
+      {
+        "query": "bitcoin price prediction",
+        "success": true,
+        "response_length": 122531,
+        "estimated_tokens": 30632,
+        "status_code": 200
+      },
+      {
+        "query": "healthy breakfast recipes",
+        "success": true,
+        "response_length": 66555,
+        "estimated_tokens": 16638,
+        "status_code": 200
+      },
+      {
+        "query": "travel tips for japan",
+        "success": true,
+        "response_length": 76690,
+        "estimated_tokens": 19172,
+        "status_code": 200
+      },
+      {
+        "query": "best programming languages 2024",
+        "success": true,
+        "response_length": 168601,
+        "estimated_tokens": 42150,
+        "status_code": 200
+      },
+      {
+        "query": "electric car reviews",
+        "success": true,
+        "response_length": 64686,
+        "estimated_tokens": 16171,
+        "status_code": 200
+      },
+      {
+        "query": "home workout routines",
+        "success": true,
+        "response_length": 69424,
+        "estimated_tokens": 17356,
+        "status_code": 200
+      }
+    ]
+  },
+  "documentation_websites": {
+    "category": "Documentation",
+    "total_queries": 10,
+    "successful_requests": 10,
+    "failed_requests": 0,
+    "total_tokens": 191492,
+    "average_tokens_per_query": 19149.2,
+    "results": [
+      {
+        "query": "how to deploy daisyui with 11ty",
+        "success": true,
+        "response_length": 68007,
+        "estimated_tokens": 17001,
+        "status_code": 200
+      },
+      {
+        "query": "pandas dataframe tutorial",
+        "success": true,
+        "response_length": 193012,
+        "estimated_tokens": 48253,
+        "status_code": 200
+      },
+      {
+        "query": "react hooks useEffect",
+        "success": true,
+        "response_length": 93319,
+        "estimated_tokens": 23329,
+        "status_code": 200
+      },
+      {
+        "query": "docker compose best practices",
+        "success": true,
+        "response_length": 66392,
+        "estimated_tokens": 16598,
+        "status_code": 200
+      },
+      {
+        "query": "typescript interfaces vs types",
+        "success": true,
+        "response_length": 31118,
+        "estimated_tokens": 7779,
+        "status_code": 200
+      },
+      {
+        "query": "mongodb aggregation pipeline",
+        "success": true,
+        "response_length": 52575,
+        "estimated_tokens": 13143,
+        "status_code": 200
+      },
+      {
+        "query": "nextjs app router guide",
+        "success": true,
+        "response_length": 14657,
+        "estimated_tokens": 3664,
+        "status_code": 200
+      },
+      {
+        "query": "tailwind css grid layout",
+        "success": true,
+        "response_length": 24429,
+        "estimated_tokens": 6107,
+        "status_code": 200
+      },
+      {
+        "query": "python async await tutorial",
+        "success": true,
+        "response_length": 113942,
+        "estimated_tokens": 28485,
+        "status_code": 200
+      },
+      {
+        "query": "kubernetes deployment yaml",
+        "success": true,
+        "response_length": 108532,
+        "estimated_tokens": 27133,
+        "status_code": 200
+      }
+    ]
+  }
+}

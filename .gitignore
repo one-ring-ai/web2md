@@ -1,6 +1,13 @@
+.Python
+*.so
 *.pyc
 *.pyo
 *.pyd
 __pycache__
 .env
 /.venv
+/venv
+/env
+/ENV
+settings.yml.new
+uwsgi.ini.new
