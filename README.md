@@ -128,7 +128,7 @@ For local development, we recommend using `uv` (a fast Python package manager) i
     # AI Integration for search result filter (OpenAI-compatible APIs)
     FILTER_SEARCH_RESULT_BY_AI=true
     AI_API_KEY=your_api_key_here
-    AI_MODEL=google/gemini-2.5-flash-preview-05-20
+    AI_MODEL=google/gemini-2.5-flash
     AI_BASE_URL=https://openrouter.ai/api/v1
 
     # Examples for different providers:

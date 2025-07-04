@@ -1,6 +1,6 @@
 services:
   web2md:
-    image: ghcr.io/lucanori/web2md:rolling
+    image: ghcr.io/lucanori/web2md:latest
     container_name: web2md
     networks:
       - web2md
