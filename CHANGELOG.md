@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/one-ring-ai/web2md/compare/v1.3.0...v1.3.1) (2025-07-05)
+
+
+### Bug Fixes
+
+* correct OpenRouter cost tracking & clean dev env ([35292e2](https://github.com/one-ring-ai/web2md/commit/35292e2e84994ba6f5d2bcf527d9dfb2a8d79030))
+
 # [1.3.0](https://github.com/one-ring-ai/web2md/compare/v1.2.1...v1.3.0) (2025-07-05)
 
 
