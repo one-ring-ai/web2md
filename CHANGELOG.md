@@ -1,3 +1,10 @@
+## [1.3.3](https://github.com/one-ring-ai/web2md/compare/v1.3.2...v1.3.3) (2025-07-05)
+
+
+### Bug Fixes
+
+* remove .env copy from Dockerfile ([762a451](https://github.com/one-ring-ai/web2md/commit/762a4510a943418755e9d6cc555ca29d222ee9a4))
+
 ## [1.3.2](https://github.com/one-ring-ai/web2md/compare/v1.3.1...v1.3.2) (2025-07-05)
 
 
