@@ -31,7 +31,7 @@ RUN \
     pip install uv
 
 COPY requirements.txt main.py ./
-COPY .env
+COPY .env .env
 
 RUN uv pip install -r requirements.txt \
     && uv pip install watchgod \

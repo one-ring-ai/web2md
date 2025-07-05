@@ -31,6 +31,7 @@ services:
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
   searxng-dev:
+    user: 1000:1000
     container_name: searxng-dev
     image: docker.io/searxng/searxng:latest
     restart: unless-stopped
@@ -40,6 +41,7 @@ services:
       - ../searxng:/etc/searxng:rw
 
   browserless-dev:
+    user: 1000:1000
     container_name: browserless-dev
     image: ghcr.io/browserless/chromium
     restart: unless-stopped

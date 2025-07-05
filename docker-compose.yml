@@ -23,6 +23,7 @@ services:
       - DB_CLEANUP_RETENTION_DAYS=90
     
   searxng:
+    user: 1000:1000
     container_name: searxng
     image: docker.io/searxng/searxng:latest
     restart: unless-stopped
@@ -32,6 +33,7 @@ services:
       - ./searxng:/etc/searxng:rw
 
   browserless:
+    user: 1000:1000
     container_name: browserless
     image: ghcr.io/browserless/chromium
     restart: unless-stopped

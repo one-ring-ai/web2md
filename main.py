@@ -44,20 +44,17 @@ MAX_IMAGES_PER_SITE = int(os.getenv('MAX_IMAGES_PER_SITE', '3'))
 MIN_IMAGE_SIZE = int(os.getenv('MIN_IMAGE_SIZE', '256'))
 MAX_TOKENS_PER_REQUEST = int(os.getenv('MAX_TOKENS_PER_REQUEST', '100000'))
 
-# Auto-research feature settings
 AUTO_MAX_REQUESTS = int(os.getenv('AUTO_MAX_REQUESTS', '5'))
 AUTO_MAX_CONTEXT_TOKENS = int(os.getenv('AUTO_MAX_CONTEXT_TOKENS', '850000'))
 DB_CLEANUP_RETENTION_DAYS = int(os.getenv('DB_CLEANUP_RETENTION_DAYS', '90'))
 
-# YouTube Rate Limit Protection
 class YouTubeRateLimitManager:
     _disabled_until = None
-    _disable_duration = 3600  # 1 hour in seconds
+    _disable_duration = 3600
     _lock = threading.Lock()
     
     @classmethod
     def is_youtube_blocked_error(cls, error_message: str) -> bool:
-        """Check if error indicates YouTube rate limiting"""
         blocking_indicators = [
             "YouTube is blocking requests from your IP",
             "You have done too many requests",
@@ -69,14 +66,12 @@ class YouTubeRateLimitManager:
     
     @classmethod
     def disable_videos_temporarily(cls):
-        """Disable video endpoint for 1 hour due to rate limiting"""
         with cls._lock:
             cls._disabled_until = time.time() + cls._disable_duration
             print(f"🚫 YouTube rate limit detected! Disabling video endpoint for {cls._disable_duration//60} minutes to prevent permanent ban.")
     
     @classmethod
     def is_videos_disabled(cls) -> bool:
-        """Check if video endpoint is currently disabled"""
         with cls._lock:
             if cls._disabled_until is None:
                 return False
@@ -90,7 +85,6 @@ class YouTubeRateLimitManager:
     
     @classmethod
     def get_remaining_cooldown(cls) -> int:
-        """Get remaining cooldown time in seconds"""
         with cls._lock:
             if cls._disabled_until is None:
                 return 0
@@ -103,11 +97,9 @@ domains_only_for_browserless = ["twitter", "x", "facebook", "ucarspro"]
 DB_PATH = os.getenv('DB_PATH', "web2md.db")
 
 def init_database():
-    """Initialize SQLite database with required tables"""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
-    # Create responses table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS responses (
             id TEXT PRIMARY KEY,
@@ -121,7 +113,6 @@ def init_database():
         )
     ''')
     
-    # Create response_steps table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS response_steps (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -138,7 +129,6 @@ def init_database():
         )
     ''')
     
-    # Create queue table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS queue (
             id TEXT PRIMARY KEY,
@@ -147,7 +137,6 @@ def init_database():
         )
     ''')
     
-    # Create indexes for performance
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_responses_status ON responses (status)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_responses_created_at ON responses (created_at)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_response_steps_response_id ON response_steps (response_id)')
@@ -157,17 +146,13 @@ def init_database():
     conn.close()
 
 def get_db_connection():
-    """Get a database connection"""
     return sqlite3.connect(DB_PATH)
 
-# Initialize database on startup
 init_database()
 
-# Database operations
 class DatabaseManager:
     @staticmethod
-    def create_response(user_query: str) -> str:
-        """Create a new response record and return its ID"""
+    def create_response(user_query: str) -> str: # type: ignore
         response_id = str(uuid.uuid4())
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -181,7 +166,6 @@ class DatabaseManager:
     
     @staticmethod
     def update_response_status(response_id: str, status: str, result: str = None, total_tokens: int = None, total_cost: float = None):
-        """Update response status and optionally result"""
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -215,7 +199,6 @@ class DatabaseManager:
     
     @staticmethod
     def get_response(response_id: str) -> dict:
-        """Get response by ID"""
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('SELECT * FROM responses WHERE id = ?', (response_id,))
@@ -238,7 +221,6 @@ class DatabaseManager:
     @staticmethod
     def add_response_step(response_id: str, step_number: int, endpoint: str, query_used: str, 
                          summary: str = None, full_response: str = None, tokens_used: int = 0, message_id: str = None):
-        """Add a step to the response"""
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('''
@@ -251,7 +233,6 @@ class DatabaseManager:
     
     @staticmethod
     def get_response_steps(response_id: str) -> List[dict]:
-        """Get all steps for a response"""
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('SELECT * FROM response_steps WHERE response_id = ? ORDER BY step_number', (response_id,))
@@ -273,7 +254,6 @@ class DatabaseManager:
     
     @staticmethod
     def add_to_queue(request_id: str):
-        """Add request to queue"""
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('INSERT INTO queue (id, status) VALUES (?, ?)', (request_id, 'pending'))
@@ -282,7 +262,6 @@ class DatabaseManager:
     
     @staticmethod
     def get_next_in_queue() -> str:
-        """Get next pending request from queue"""
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('SELECT id FROM queue WHERE status = ? ORDER BY created_at LIMIT 1', ('pending',))
@@ -292,7 +271,6 @@ class DatabaseManager:
     
     @staticmethod
     def update_queue_status(request_id: str, status: str):
-        """Update queue item status"""
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('UPDATE queue SET status = ? WHERE id = ?', (status, request_id))
@@ -301,30 +279,24 @@ class DatabaseManager:
     
     @staticmethod
     def cleanup_old_records():
-        """Clean up records older than retention period"""
         cutoff_date = datetime.datetime.now() - datetime.timedelta(days=DB_CLEANUP_RETENTION_DAYS)
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Get old response IDs
         cursor.execute('SELECT id FROM responses WHERE created_at < ?', (cutoff_date.isoformat(),))
         old_response_ids = [row[0] for row in cursor.fetchall()]
         
-        # Delete old response steps
         for response_id in old_response_ids:
             cursor.execute('DELETE FROM response_steps WHERE response_id = ?', (response_id,))
         
-        # Delete old responses
         cursor.execute('DELETE FROM responses WHERE created_at < ?', (cutoff_date.isoformat(),))
         
-        # Delete old queue items
         cursor.execute('DELETE FROM queue WHERE created_at < ?', (cutoff_date.isoformat(),))
         
         conn.commit()
         conn.close()
         print(f"Cleaned up {len(old_response_ids)} old records")
 
-# LLM Decision Schemas
 class LLMDecision(BaseModel):
     should_continue: bool
     confidence: float  # 0.0 to 1.0
@@ -343,9 +315,6 @@ class AutoResearchResult(BaseModel):
     websearch_price: float
 
 def create_decision_prompt(user_query: str, current_step: int, previous_summaries: List[str], total_tokens: int) -> str:
-    """Create prompt for LLM decision making"""
-    
-    # Check if videos are currently disabled
     videos_status = ""
     if YouTubeRateLimitManager.is_videos_disabled():
         remaining = YouTubeRateLimitManager.get_remaining_cooldown()
@@ -407,7 +376,6 @@ Example valid responses:
     return context
 
 def create_final_response_prompt(user_query: str, all_summaries: List[str], collected_data: List[dict]) -> str:
-    """Create prompt for final response generation"""
     return f"""
 You are an expert research assistant. You have conducted comprehensive research on: "{user_query}"
 
@@ -433,36 +401,29 @@ Guidelines:
 Generate a complete markdown response that fully answers the user's query using all the research data.
 """
 
-# Token Management
 class TokenManager:
     @staticmethod
     def count_tokens(text: str) -> int:
-        """Estimate token count using existing function"""
         return estimate_tokens(text)
     
     @staticmethod
     def is_within_limit(current_tokens: int, new_content: str) -> bool:
-        """Check if adding new content would exceed token limit with tolerance"""
         new_tokens = TokenManager.count_tokens(new_content)
         total_tokens = current_tokens + new_tokens
-        # Allow 50k tolerance as specified
         return total_tokens <= (AUTO_MAX_CONTEXT_TOKENS + 50000)
     
     @staticmethod
     def truncate_content(content: str, max_tokens: int) -> str:
-        """Truncate content to fit within token limit"""
         current_tokens = TokenManager.count_tokens(content)
         if current_tokens <= max_tokens:
             return content
         
-        # Rough estimation: 1 token ≈ 4 characters
         max_chars = max_tokens * 4
         truncated = content[:max_chars]
         return truncated + "\n\n[Content truncated due to token limit]"
     
     @staticmethod
     def prepare_context_summaries(steps: List[dict], max_tokens: int) -> List[str]:
-        """Prepare summaries ensuring they fit within token limit"""
         summaries = []
         current_tokens = 0
         
@@ -474,31 +435,26 @@ class TokenManager:
                 summaries.append(summary)
                 current_tokens += summary_tokens
             else:
-                # Truncate this summary to fit
                 remaining_tokens = max_tokens - current_tokens
-                if remaining_tokens > 100:  # Only add if reasonable space left
+                if remaining_tokens > 100:
                     truncated_summary = TokenManager.truncate_content(summary, remaining_tokens)
                     summaries.append(truncated_summary)
                 break
         
         return summaries
 
-# Core Auto-Research Logic
 class AutoResearcher:
     @staticmethod
     def process_request(request_id: str, user_query: str) -> dict:
-        """Main entry point for processing auto-research requests"""
         try:
             print(f"Starting auto-research for request {request_id}: {user_query}")
             
-            # Initialize message IDs tracking
             AutoResearcher._current_message_ids = []
             
             total_tokens = 0
             step_number = 1
             collected_data = []
             
-            # Step 1: Initial search (always performed)
             print(f"Step {step_number}: Performing initial search")
             search_result = AutoResearcher._call_search_endpoint(user_query, num_results=5)
             
@@ -507,7 +463,6 @@ class AutoResearcher:
                 step_tokens = TokenManager.count_tokens(str(search_result))
                 total_tokens += step_tokens
                 
-                # Store step in database
                 DatabaseManager.add_response_step(
                     request_id, step_number, 'search', user_query,
                     summary=step_summary, full_response=str(search_result),
@@ -526,21 +481,17 @@ class AutoResearcher:
             else:
                 raise Exception("Initial search failed")
             
-            # Continue with additional steps if needed
             while step_number <= AUTO_MAX_REQUESTS:
-                # Check token limit
                 if total_tokens >= AUTO_MAX_CONTEXT_TOKENS:
                     print(f"Token limit reached: {total_tokens:,} tokens")
                     break
                 
-                # Get previous summaries for context
                 previous_summaries = [data['summary'] for data in collected_data]
                 context_summaries = TokenManager.prepare_context_summaries(
                     collected_data, 
-                    AUTO_MAX_CONTEXT_TOKENS // 4  # Use 1/4 of limit for context
+                    AUTO_MAX_CONTEXT_TOKENS // 4
                 )
                 
-                # Ask LLM for decision
                 decision = AutoResearcher._get_llm_decision(
                     user_query, step_number, context_summaries, total_tokens
                 )
@@ -552,7 +503,6 @@ class AutoResearcher:
                 if decision.next_action == 'stop':
                     break
                 
-                # Execute the next action
                 result = None
                 if decision.next_action == 'search':
                     result = AutoResearcher._call_search_endpoint(decision.adapted_query, num_results=3)
@@ -565,14 +515,12 @@ class AutoResearcher:
                     step_summary = AutoResearcher._create_summary(result, decision.next_action)
                     step_tokens = TokenManager.count_tokens(str(result))
                     
-                    # Check if adding this would exceed token limit
                     if not TokenManager.is_within_limit(total_tokens, str(result)):
                         print(f"Adding step {step_number} would exceed token limit")
                         break
                     
                     total_tokens += step_tokens
                     
-                    # Store step in database
                     DatabaseManager.add_response_step(
                         request_id, step_number, decision.next_action, decision.adapted_query,
                         summary=step_summary, full_response=str(result),
@@ -592,12 +540,10 @@ class AutoResearcher:
                     print(f"Step {step_number} failed, continuing...")
                     step_number += 1
             
-            # Generate final response
             final_result = AutoResearcher._generate_final_response(
                 user_query, collected_data, total_tokens
             )
             
-            # Calculate costs from tracked message IDs
             message_ids = getattr(AutoResearcher, '_current_message_ids', [])
             total_cost = AutoResearcher._calculate_total_cost(message_ids)
             final_result['websearch_price'] = total_cost
@@ -608,7 +554,6 @@ class AutoResearcher:
         except Exception as e:
             print(f"Error in auto-research for request {request_id}: {e}")
             
-            # Create a fallback error response
             error_response = {
                 "markdown_response": f"# Error Processing Request\n\nAn error occurred while processing your research request: {str(e)}\n\nPartial results may have been collected.",
                 "media_references": {"videos": [], "images": []},
@@ -626,11 +571,8 @@ class AutoResearcher:
     
     @staticmethod
     def _call_search_endpoint(query: str, num_results: int = 5) -> dict:
-        """Call the internal search endpoint"""
         try:
-            # Use the existing search function
             result = search(query, num_results, json_response=True)
-            # Extract the actual data from JSONResponse
             if hasattr(result, 'body'):
                 import json
                 return json.loads(result.body.decode())
@@ -641,19 +583,15 @@ class AutoResearcher:
     
     @staticmethod
     def _call_videos_endpoint(query: str, num_results: int = 3) -> dict:
-        """Call the internal videos endpoint"""
         try:
-            # Check if videos are disabled due to rate limiting
             if YouTubeRateLimitManager.is_videos_disabled():
                 remaining = YouTubeRateLimitManager.get_remaining_cooldown()
                 print(f"🚫 Skipping video search - disabled for {remaining//60} more minutes due to YouTube rate limiting")
                 return None
             
-            # Use the existing searxng function for videos
             result_list = searxng(query, categories="videos")
             results = result_list["results"] if isinstance(result_list, dict) and "results" in result_list else result_list
             
-            # Apply AI reranking if enabled
             if FILTER_SEARCH_RESULT_BY_AI:
                 try:
                     ai_input = {"query": query, "results": results}
@@ -661,14 +599,12 @@ class AutoResearcher:
                     results = reranked_results["results"]
                 except Exception as e:
                     print(f"AI reranking failed for videos in auto-research: {e}")
-                    # Continue with non-reranked results
             
             return results[:num_results]
         except Exception as e:
             error_msg = str(e)
             print(f"Videos endpoint error: {error_msg}")
             
-            # Check if this error indicates YouTube rate limiting
             if YouTubeRateLimitManager.is_youtube_blocked_error(error_msg):
                 YouTubeRateLimitManager.disable_videos_temporarily()
             
@@ -676,13 +612,10 @@ class AutoResearcher:
     
     @staticmethod
     def _call_images_endpoint(query: str, num_results: int = 5) -> dict:
-        """Call the internal images endpoint"""
         try:
-            # Use the existing searxng function for images
             result_list = searxng(query, categories="images")
             results = result_list["results"] if isinstance(result_list, dict) and "results" in result_list else result_list
             
-            # Apply AI reranking if enabled
             if FILTER_SEARCH_RESULT_BY_AI:
                 ai_input = {"query": query, "results": results}
                 reranked_results = reranker_ai_images(ai_input)
@@ -695,7 +628,6 @@ class AutoResearcher:
     
     @staticmethod
     def _create_summary(data: any, endpoint_type: str) -> str:
-        """Create a summary of the step results"""
         if not data:
             return "No data retrieved"
         
@@ -716,7 +648,6 @@ class AutoResearcher:
     
     @staticmethod
     def _get_llm_decision(user_query: str, current_step: int, previous_summaries: List[str], total_tokens: int) -> LLMDecision:
-        """Get LLM decision for next action"""
         if not AI_API_KEY or not AI_BASE_URL:
             return None
         
@@ -752,11 +683,8 @@ class AutoResearcher:
                     response_format={"type": "json_object"}
                 )
                 
-                # Track message ID for cost calculation
                 message_id = response.id if hasattr(response, 'id') else None
                 if message_id:
-                    # Store message ID in a way that can be accessed by the main process
-                    # We'll use a simple class attribute to collect them
                     if not hasattr(AutoResearcher, '_current_message_ids'):
                         AutoResearcher._current_message_ids = []
                     AutoResearcher._current_message_ids.append(message_id)
@@ -774,15 +702,12 @@ class AutoResearcher:
     
     @staticmethod
     def _generate_final_response(user_query: str, collected_data: List[dict], total_tokens: int) -> dict:
-        """Generate the final markdown response"""
-        # Extract media references
         videos = []
         images = []
-        search_links = []  # Track search URLs from reranker
+        search_links = []
         
         for data in collected_data:
             if data['endpoint'] == 'search' and isinstance(data['data'], dict):
-                # Extract search URLs from the structured search response
                 source_refs = data['data'].get('source_references', {})
                 if 'links' in source_refs:
                     for link in source_refs['links']:
@@ -806,7 +731,6 @@ class AutoResearcher:
                         'description': image.get('content', '')
                     })
         
-        # Generate markdown using LLM
         try:
             if not AI_API_KEY or not AI_BASE_URL:
                 raise Exception("AI credentials not available")
@@ -839,7 +763,6 @@ class AutoResearcher:
                 max_tokens=4000
             )
             
-            # Track message ID for cost calculation
             message_id = response.id if hasattr(response, 'id') else None
             if message_id:
                 if not hasattr(AutoResearcher, '_current_message_ids'):
@@ -850,7 +773,6 @@ class AutoResearcher:
             
         except Exception as e:
             print(f"Failed to generate LLM response: {e}")
-            # Fallback: create basic markdown from collected data
             markdown_response = AutoResearcher._create_fallback_response(user_query, collected_data)
         
         return {
@@ -871,7 +793,6 @@ class AutoResearcher:
     
     @staticmethod
     def _create_fallback_response(user_query: str, collected_data: List[dict]) -> str:
-        """Create a basic markdown response if LLM generation fails"""
         markdown = f"# Research Results: {user_query}\n\n"
         
         for i, data in enumerate(collected_data, 1):
@@ -886,7 +807,6 @@ class AutoResearcher:
     
     @staticmethod
     def _calculate_total_cost(message_ids: List[str]) -> float:
-        """Calculate total cost from OpenRouter API with retry mechanism for 404 errors"""
         if not message_ids:
             return 0.0
         
@@ -895,18 +815,16 @@ class AutoResearcher:
         for message_id in message_ids:
             message_cost = 0.0
             max_retries = 3
-            retry_delay = 5  # seconds
+            retry_delay = 5
             
-            for attempt in range(max_retries + 1):  # 0, 1, 2, 3 (original + 3 retries)
+            for attempt in range(max_retries + 1):
                 try:
-                    # Wait longer for OpenRouter to process the cost
                     if attempt == 0:
-                        time.sleep(2)  # Initial wait
+                        time.sleep(2)
                     else:
                         print(f"Retrying cost fetch for {message_id} (attempt {attempt}/{max_retries})")
                         time.sleep(retry_delay)
                     
-                    # Fetch cost from OpenRouter API
                     with httpx.Client() as client:
                         response = client.get(
                             f"https://openrouter.ai/api/v1/generation?id={message_id}",
@@ -914,7 +832,7 @@ class AutoResearcher:
                                 "Authorization": f"Bearer {AI_API_KEY}",
                                 "Content-Type": "application/json"
                             },
-                            timeout=15  # Increased timeout
+                            timeout=15
                         )
                         
                         if response.status_code == 200:
@@ -923,53 +841,45 @@ class AutoResearcher:
                             if cost:
                                 message_cost = float(cost)
                                 print(f"Message {message_id}: ${message_cost}")
-                                break  # Success, exit retry loop
+                                break
                             else:
                                 print(f"No cost data in response for {message_id}")
                         elif response.status_code == 404:
                             if attempt < max_retries:
                                 print(f"Got 404 for {message_id}, will retry in {retry_delay}s...")
-                                continue  # Retry on 404
+                                continue
                             else:
-                                # All retries exhausted for 404, use fallback cost
-                                message_cost = 0.1  # $0.1 fallback
+                                message_cost = 0.1
                                 print(f"Failed to get cost for {message_id} after {max_retries} retries (404). Using fallback cost: ${message_cost}")
                                 break
                         else:
-                            # Non-404 error, don't retry
                             print(f"Failed to get cost for message {message_id}: HTTP {response.status_code}")
                             break
                             
                 except Exception as e:
-                    # Non-HTTP error, don't retry
                     print(f"Error fetching cost for message {message_id}: {e}")
                     break
             
-            # Add this message's cost to total (could be 0.0, actual cost, or 0.1 fallback)
             total_cost += message_cost
         
         print(f"Total calculated cost: ${total_cost}")
         return total_cost
 
-# Queue management system
 class QueueManager:
     _processing_lock = threading.Lock()
-    _executor = ThreadPoolExecutor(max_workers=1)  # Process one request at a time
+    _executor = ThreadPoolExecutor(max_workers=1)
     
     @staticmethod
     def add_request(user_query: str) -> str:
-        """Add a new request to the queue and return request ID"""
         request_id = DatabaseManager.create_response(user_query)
         DatabaseManager.add_to_queue(request_id)
         
-        # Start processing if not already running
         QueueManager._executor.submit(QueueManager._process_queue)
         
         return request_id
     
     @staticmethod
     def _process_queue():
-        """Process queue - only one request at a time"""
         with QueueManager._processing_lock:
             while True:
                 request_id = DatabaseManager.get_next_in_queue()
@@ -977,19 +887,15 @@ class QueueManager:
                     break
                 
                 try:
-                    # Update status to processing
                     DatabaseManager.update_queue_status(request_id, 'processing')
                     DatabaseManager.update_response_status(request_id, 'processing')
                     
-                    # Get the request details
                     response_data = DatabaseManager.get_response(request_id)
                     if not response_data:
                         continue
                     
-                    # Process the auto-research request
                     result = AutoResearcher.process_request(request_id, response_data['user_query'])
                     
-                    # Update with final result
                     DatabaseManager.update_response_status(
                         request_id, 
                         'completed', 
@@ -1003,12 +909,10 @@ class QueueManager:
                     DatabaseManager.update_response_status(request_id, 'failed', result=str(e))
                 
                 finally:
-                    # Remove from queue
                     DatabaseManager.update_queue_status(request_id, 'completed')
     
     @staticmethod
     def get_status(request_id: str) -> dict:
-        """Get status of a request"""
         response_data = DatabaseManager.get_response(request_id)
         if not response_data:
             return {"error": "Request not found"}
@@ -1028,14 +932,12 @@ class QueueManager:
                 "status": response_data['status']
             }
 
-# Background cleanup scheduler
 class CleanupScheduler:
     _cleanup_thread = None
     _running = False
     
     @staticmethod
     def start_cleanup_scheduler():
-        """Start the cleanup scheduler"""
         if CleanupScheduler._running:
             return
         
@@ -1049,28 +951,24 @@ class CleanupScheduler:
     
     @staticmethod
     def _cleanup_worker():
-        """Background worker that runs cleanup weekly"""
         try:
             import schedule
             
-            # Schedule cleanup every week
             schedule.every().week.do(DatabaseManager.cleanup_old_records)
             
             while CleanupScheduler._running:
                 schedule.run_pending()
-                time.sleep(3600)  # Check every hour
+                time.sleep(3600)
         except ImportError:
             print("Schedule module not available, cleanup will be manual only")
-            # Fallback: just run cleanup once a day
             while CleanupScheduler._running:
-                time.sleep(86400)  # 24 hours
+                time.sleep(86400)
                 if CleanupScheduler._running:
                     try:
                         DatabaseManager.cleanup_old_records()
                     except Exception as e:
                         print(f"Cleanup error: {e}")
 
-# Start cleanup scheduler on application startup
 CleanupScheduler.start_cleanup_scheduler()
 
 app = FastAPI()
@@ -1191,7 +1089,6 @@ def get_transcript(video_id: str, format: str = "markdown"):
     except Exception as e:
         error_msg = str(e)
         
-        # Check if this is a YouTube rate limiting error
         if YouTubeRateLimitManager.is_youtube_blocked_error(error_msg):
             YouTubeRateLimitManager.disable_videos_temporarily()
         
@@ -1229,7 +1126,6 @@ def estimate_tokens(text):
     return len(text) // 4
 
 def filter_images_by_size_and_limit(html, base_url):
-    """Filter images by size and limit the number of images"""
     from bs4 import BeautifulSoup
     from urllib.parse import urljoin, urlparse
     
@@ -1306,7 +1202,6 @@ def parse_html_to_markdown(html, url, title=None):
     }
 
 def get_transcript_content(video_id: str) -> str:
-    """Get transcript content as plain text for AI reranking"""
     try:
         proxies = get_proxies(without=True)
         if proxies:
@@ -1321,7 +1216,6 @@ def get_transcript_content(video_id: str) -> str:
         error_msg = str(e)
         print(f"Failed to get transcript for {video_id}: {error_msg}")
         
-        # Check if this is a YouTube rate limiting error
         if YouTubeRateLimitManager.is_youtube_blocked_error(error_msg):
             YouTubeRateLimitManager.disable_videos_temporarily()
         
@@ -1368,16 +1262,14 @@ def reranker_ai_videos(data: Dict[str, List[dict]], max_token: int = 8000) -> Li
     model = AI_MODEL
     
     filtered_results = []
-    batch_size = 5  # Smaller batch size for videos due to transcript content
+    batch_size = 5
     query = data["query"]
     results = data["results"]
     
-    # Limit results to process for efficiency (video processing is expensive)
-    max_results_to_process = min(len(results), 15)  # Process max 15 video results
+    max_results_to_process = min(len(results), 15)
     results = results[:max_results_to_process]
     print(f"Processing {len(results)} videos for AI reranking (limited from original {len(data['results'])} results)")
     
-    # Fetch transcripts for YouTube videos
     enhanced_results = []
     for result in results:
         enhanced_result = result.copy()
@@ -1386,7 +1278,7 @@ def reranker_ai_videos(data: Dict[str, List[dict]], max_token: int = 8000) -> Li
             if video_id_match:
                 video_id = video_id_match.group(1)
                 transcript = get_transcript_content(video_id)
-                enhanced_result["content"] = transcript[:3000]  # Limit transcript length for AI processing
+                enhanced_result["content"] = transcript[:3000]
             else:
                 enhanced_result["content"] = result.get("content", "")
         else:
@@ -1429,7 +1321,6 @@ def reranker_ai_videos(data: Dict[str, List[dict]], max_token: int = 8000) -> Li
         print(f"AI Video Reranking Response: {response.choices[0].message.content}")
         batch_filtered_results = json.loads(response.choices[0].message.content)
         
-        # Handle both formats: {"results": [...]} and direct array [...]
         ai_results = []
         if isinstance(batch_filtered_results, dict) and 'results' in batch_filtered_results:
             ai_results = batch_filtered_results['results']
@@ -1439,20 +1330,15 @@ def reranker_ai_videos(data: Dict[str, List[dict]], max_token: int = 8000) -> Li
             print(f"Warning: Unexpected video batch response format: {batch_filtered_results}")
             continue
         
-        # Merge AI results back with original metadata
         for ai_result in ai_results:
-            # Find original result to preserve all metadata
             original_result = next((r for r in batch if r['url'] == ai_result['url']), None)
             if original_result:
-                # Get the full original result from the input data
                 full_original = next((r for r in results if r['url'] == ai_result['url']), original_result)
-                # Preserve all original fields while keeping AI selection
                 filtered_results.append(full_original)
 
     return {"results": filtered_results, "query": query}
 
 def rerenker_ai(data: Dict[str, List[dict]], max_token: int = 8000) -> List[dict]:
-    """Original AI reranker for main search endpoint"""
     client = None
     model = None
     class ResultItem(BaseModel):
@@ -1483,12 +1369,11 @@ def rerenker_ai(data: Dict[str, List[dict]], max_token: int = 8000) -> List[dict
     model = AI_MODEL
     
     filtered_results = []
-    batch_size = 15  # Slightly larger batches for efficiency
+    batch_size = 15
     query = data["query"]
     results = data["results"]
     
-    # Limit results to process for efficiency (we typically need 5-10 final results)
-    max_results_to_process = min(len(results), 30)  # Process max 30 search results
+    max_results_to_process = min(len(results), 30)
     results = results[:max_results_to_process]
     print(f"Processing {len(results)} search results for AI reranking (limited from original {len(data['results'])} results)")
     
@@ -1524,7 +1409,6 @@ def rerenker_ai(data: Dict[str, List[dict]], max_token: int = 8000) -> List[dict
         print(response.choices[0].message.content)
         batch_filtered_results = json.loads(response.choices[0].message.content)
         
-        # Handle both formats: {"results": [...]} and direct array [...]
         if isinstance(batch_filtered_results, dict) and 'results' in batch_filtered_results:
             filtered_results.extend(batch_filtered_results['results'])
         elif isinstance(batch_filtered_results, list):
@@ -1535,7 +1419,6 @@ def rerenker_ai(data: Dict[str, List[dict]], max_token: int = 8000) -> List[dict
     return {"results": filtered_results, "query": query}
 
 def reranker_ai_images(data: Dict[str, List[dict]], max_token: int = 8000) -> List[dict]:
-    """AI reranker for images based on metadata"""
     client = None
     model = None
     
@@ -1574,12 +1457,11 @@ def reranker_ai_images(data: Dict[str, List[dict]], max_token: int = 8000) -> Li
     model = AI_MODEL
     
     filtered_results = []
-    batch_size = 20  # Larger batches for fewer API calls
+    batch_size = 20
     query = data["query"]
     results = data["results"]
     
-    # Limit results to process for efficiency (we typically only need 5-10 images)
-    max_results_to_process = min(len(results), 20)  # Process max 20 results instead of all
+    max_results_to_process = min(len(results), 20)
     results = results[:max_results_to_process]
     print(f"Processing {len(results)} images for AI reranking (limited from original {len(data['results'])} results)")
     
@@ -1619,7 +1501,6 @@ def reranker_ai_images(data: Dict[str, List[dict]], max_token: int = 8000) -> Li
         print(f"AI Image Reranking Response: {response.choices[0].message.content}")
         batch_filtered_results = json.loads(response.choices[0].message.content)
         
-        # Handle both formats: {"results": [...]} and direct array [...]
         ai_results = []
         if isinstance(batch_filtered_results, dict) and 'results' in batch_filtered_results:
             ai_results = batch_filtered_results['results']
@@ -1629,9 +1510,7 @@ def reranker_ai_images(data: Dict[str, List[dict]], max_token: int = 8000) -> Li
             print(f"Warning: Unexpected image batch response format: {batch_filtered_results}")
             continue
         
-        # Merge AI results back with original metadata  
         for ai_result in ai_results:
-            # Find original result to preserve all metadata
             original_result = next((r for r in results if r['url'] == ai_result['url']), None)
             if original_result:
                 filtered_results.append(original_result)
@@ -1660,7 +1539,7 @@ def searxng(query: str, categories: str = "general") -> dict:
 
 def search(query: str, num_results: int, json_response: bool = False) -> list:
     search_results = searxng(query)
-    reranked_urls = []  # Track URLs selected by reranker
+    reranked_urls = []
     
     if FILTER_SEARCH_RESULT_BY_AI:
         ai_input = {
@@ -1682,7 +1561,6 @@ def search(query: str, num_results: int, json_response: bool = False) -> list:
         url = result["url"]
         title = result["title"]
         
-        # Track URL selected by reranker
         reranked_urls.append({
             "url": url,
             "title": title,
@@ -1713,7 +1591,6 @@ def search(query: str, num_results: int, json_response: bool = False) -> list:
                 
     
     if json_response:
-        # Return structured response with both content and source references
         return {
             "content": json_return,
             "source_references": {
@@ -1736,7 +1613,6 @@ def get_search_images(
     result_list = searxng(q, categories="images")
     results = result_list["results"] if isinstance(result_list, dict) and "results" in result_list else result_list
     
-    # Apply AI reranking if enabled
     if FILTER_SEARCH_RESULT_BY_AI:
         ai_input = {
             "query": q,
@@ -1754,7 +1630,6 @@ def get_search_videos(
     format: str = Query("metadata", description="Output format (metadata, transcripts, or json)")
     ):
     
-    # Check if videos are temporarily disabled due to rate limiting
     if YouTubeRateLimitManager.is_videos_disabled():
         remaining = YouTubeRateLimitManager.get_remaining_cooldown()
         return JSONResponse(
@@ -1771,7 +1646,6 @@ def get_search_videos(
     result_list = searxng(q, categories="videos")
     results = result_list["results"] if isinstance(result_list, dict) and "results" in result_list else result_list
     
-    # Apply AI reranking if enabled
     if FILTER_SEARCH_RESULT_BY_AI:
         try:
             ai_input = {
@@ -1782,11 +1656,8 @@ def get_search_videos(
             results = reranked_results["results"]
         except Exception as e:
             print(f"AI reranking failed for videos: {e}")
-            # Continue with non-reranked results
     
-    # Handle different output formats
     if format == "transcripts":
-        # Return with full transcripts
         enhanced_results = []
         for result in results[:num_results]:
             enhanced_result = result.copy()
@@ -1802,7 +1673,7 @@ def get_search_videos(
     elif format == "json":
         return JSONResponse(results[:num_results])
     
-    else:  # metadata (default)
+    else:
         return JSONResponse(results[:num_results])
 
 @app.get("/search")
@@ -1820,7 +1691,6 @@ def get_search_results(
 def start_auto_research(
     q: str = Query(..., description="Research query"),
     ):
-    """Start auto-research process and return request ID"""
     try:
         request_id = QueueManager.add_request(q)
         return JSONResponse({
@@ -1836,7 +1706,6 @@ def start_auto_research(
 
 @app.get("/auto/status/{request_id}")
 def get_auto_research_status(request_id: str):
-    """Get status of auto-research request"""
     try:
         status_data = QueueManager.get_status(request_id)
         return JSONResponse(status_data)
@@ -1848,7 +1717,6 @@ def get_auto_research_status(request_id: str):
 
 @app.get("/status/videos")
 def get_videos_status():
-    """Get video endpoint status (rate limiting info)"""
     is_disabled = YouTubeRateLimitManager.is_videos_disabled()
     remaining = YouTubeRateLimitManager.get_remaining_cooldown()
     
