@@ -1,3 +1,10 @@
+## [1.3.2](https://github.com/one-ring-ai/web2md/compare/v1.3.1...v1.3.2) (2025-07-05)
+
+
+### Bug Fixes
+
+* update Docker configurations and clean up code ([90de9b4](https://github.com/one-ring-ai/web2md/commit/90de9b40ac6457e7d95dba17ebe3f1c42f570e50))
+
 ## [1.3.1](https://github.com/one-ring-ai/web2md/compare/v1.3.0...v1.3.1) (2025-07-05)
 
 
