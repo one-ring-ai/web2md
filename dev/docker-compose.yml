@@ -1,17 +1,17 @@
 services:
-  web2md:
-    image: ghcr.io/one-ring-ai/web2md:latest
-    container_name: web2md
-    networks:
-      - web2md
+  web2md-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: web2md-dev
     ports:
       - "7001:8000"
-    depends_on:
-      - searxng
-      - browserless
+    volumes:
+      - ..:/app:rw
+      - /app/.venv
     environment:
-      - SEARXNG_URL=http://searxng:8888
-      - BROWSERLESS_URL=http://browserless:3000
+      - SEARXNG_URL=http://searxng-dev:8080
+      - BROWSERLESS_URL=http://browserless-dev:3000
       - BROWSERLESS_TOKEN=${BROWSERLESS_TOKEN}
       - REQUEST_TIMEOUT=30
       - MAX_IMAGES_PER_SITE=0
@@ -24,22 +24,27 @@ services:
       - AUTO_MAX_REQUESTS=5
       - AUTO_MAX_CONTEXT_TOKENS=850000
       - DB_CLEANUP_RETENTION_DAYS=90
-    
-  searxng:
-    container_name: searxng
+      - DB_PATH=/app/data/web2md.db
+    restart: unless-stopped
+    networks:
+      - web2md-dev
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  searxng-dev:
+    container_name: searxng-dev
     image: docker.io/searxng/searxng:latest
     restart: unless-stopped
     networks:
-      - web2md
+      - web2md-dev
     volumes:
-      - ./searxng:/etc/searxng:rw
+      - ../searxng:/etc/searxng:rw
 
-  browserless:
-    container_name: browserless
+  browserless-dev:
+    container_name: browserless-dev
     image: ghcr.io/browserless/chromium
     restart: unless-stopped
     networks:
-      - web2md
+      - web2md-dev
     environment:
       - TOKEN=${BROWSERLESS_TOKEN}
       - MAX_CONCURRENT_SESSIONS=10
@@ -47,5 +52,5 @@ services:
       - QUEUED=10
 
 networks:
-  web2md:
+  web2md-dev:
     driver: bridge

@@ -100,7 +100,7 @@ class YouTubeRateLimitManager:
 domains_only_for_browserless = ["twitter", "x", "facebook", "ucarspro"]
 
 # Database setup
-DB_PATH = "web2md.db"
+DB_PATH = os.getenv('DB_PATH', "web2md.db")
 
 def init_database():
     """Initialize SQLite database with required tables"""
@@ -778,9 +778,20 @@ class AutoResearcher:
         # Extract media references
         videos = []
         images = []
+        search_links = []  # Track search URLs from reranker
         
         for data in collected_data:
-            if data['endpoint'] == 'videos' and isinstance(data['data'], list):
+            if data['endpoint'] == 'search' and isinstance(data['data'], dict):
+                # Extract search URLs from the structured search response
+                source_refs = data['data'].get('source_references', {})
+                if 'links' in source_refs:
+                    for link in source_refs['links']:
+                        search_links.append({
+                            'url': link.get('url', ''),
+                            'title': link.get('title', ''),
+                            'relevance': link.get('relevance', f"Query: {data['query']}")
+                        })
+            elif data['endpoint'] == 'videos' and isinstance(data['data'], list):
                 for video in data['data']:
                     videos.append({
                         'url': video.get('url', ''),
@@ -846,7 +857,8 @@ class AutoResearcher:
             "markdown_response": markdown_response,
             "media_references": {
                 "videos": videos,
-                "images": images
+                "images": images,
+                "search_links": search_links
             },
             "metadata": {
                 "total_requests_used": len(collected_data),
@@ -874,40 +886,69 @@ class AutoResearcher:
     
     @staticmethod
     def _calculate_total_cost(message_ids: List[str]) -> float:
-        """Calculate total cost from OpenRouter API"""
+        """Calculate total cost from OpenRouter API with retry mechanism for 404 errors"""
         if not message_ids:
             return 0.0
         
         total_cost = 0.0
         
         for message_id in message_ids:
-            try:
-                # Wait a bit for OpenRouter to process the cost
-                time.sleep(0.5)
-                
-                # Fetch cost from OpenRouter API
-                with httpx.Client() as client:
-                    response = client.get(
-                        f"https://openrouter.ai/api/v1/generations/{message_id}",
-                        headers={
-                            "Authorization": f"Bearer {AI_API_KEY}",
-                            "Content-Type": "application/json"
-                        },
-                        timeout=10
-                    )
-                    
-                    if response.status_code == 200:
-                        data = response.json()
-                        cost = data.get('data', {}).get('total_cost', 0.0)
-                        if cost:
-                            total_cost += float(cost)
-                            print(f"Message {message_id}: ${cost}")
+            message_cost = 0.0
+            max_retries = 3
+            retry_delay = 5  # seconds
+            
+            for attempt in range(max_retries + 1):  # 0, 1, 2, 3 (original + 3 retries)
+                try:
+                    # Wait longer for OpenRouter to process the cost
+                    if attempt == 0:
+                        time.sleep(2)  # Initial wait
                     else:
-                        print(f"Failed to get cost for message {message_id}: {response.status_code}")
+                        print(f"Retrying cost fetch for {message_id} (attempt {attempt}/{max_retries})")
+                        time.sleep(retry_delay)
+                    
+                    # Fetch cost from OpenRouter API
+                    with httpx.Client() as client:
+                        response = client.get(
+                            f"https://openrouter.ai/api/v1/generation?id={message_id}",
+                            headers={
+                                "Authorization": f"Bearer {AI_API_KEY}",
+                                "Content-Type": "application/json"
+                            },
+                            timeout=15  # Increased timeout
+                        )
                         
-            except Exception as e:
-                print(f"Error fetching cost for message {message_id}: {e}")
+                        if response.status_code == 200:
+                            data = response.json()
+                            cost = data.get('data', {}).get('total_cost', 0.0)
+                            if cost:
+                                message_cost = float(cost)
+                                print(f"Message {message_id}: ${message_cost}")
+                                break  # Success, exit retry loop
+                            else:
+                                print(f"No cost data in response for {message_id}")
+                        elif response.status_code == 404:
+                            if attempt < max_retries:
+                                print(f"Got 404 for {message_id}, will retry in {retry_delay}s...")
+                                continue  # Retry on 404
+                            else:
+                                # All retries exhausted for 404, use fallback cost
+                                message_cost = 0.1  # $0.1 fallback
+                                print(f"Failed to get cost for {message_id} after {max_retries} retries (404). Using fallback cost: ${message_cost}")
+                                break
+                        else:
+                            # Non-404 error, don't retry
+                            print(f"Failed to get cost for message {message_id}: HTTP {response.status_code}")
+                            break
+                            
+                except Exception as e:
+                    # Non-HTTP error, don't retry
+                    print(f"Error fetching cost for message {message_id}: {e}")
+                    break
+            
+            # Add this message's cost to total (could be 0.0, actual cost, or 0.1 fallback)
+            total_cost += message_cost
         
+        print(f"Total calculated cost: ${total_cost}")
         return total_cost
 
 # Queue management system
@@ -1619,6 +1660,8 @@ def searxng(query: str, categories: str = "general") -> dict:
 
 def search(query: str, num_results: int, json_response: bool = False) -> list:
     search_results = searxng(query)
+    reranked_urls = []  # Track URLs selected by reranker
+    
     if FILTER_SEARCH_RESULT_BY_AI:
         ai_input = {
             "query": query,
@@ -1638,6 +1681,13 @@ def search(query: str, num_results: int, json_response: bool = False) -> list:
             
         url = result["url"]
         title = result["title"]
+        
+        # Track URL selected by reranker
+        reranked_urls.append({
+            "url": url,
+            "title": title,
+            "relevance": f"Query: {query}"
+        })
         
         if "youtube" in url:
             video_id = re.search(r"v=([^&]+)", url)
@@ -1663,7 +1713,19 @@ def search(query: str, num_results: int, json_response: bool = False) -> list:
                 
     
     if json_response:
-        return JSONResponse(json_return)
+        # Return structured response with both content and source references
+        return {
+            "content": json_return,
+            "source_references": {
+                "links": reranked_urls
+            },
+            "metadata": {
+                "query": query,
+                "num_results": len(json_return),
+                "total_sources": len(reranked_urls),
+                "ai_reranked": FILTER_SEARCH_RESULT_BY_AI
+            }
+        }
     return PlainTextResponse(markdown_return)
 
 @app.get("/images")
@@ -1749,6 +1811,9 @@ def get_search_results(
     num_results: int = Query(5, description="Number of results"),
     format: str = Query("markdown", description="Output format (markdown or json)")):
     result_list = search(q, num_results, format == "json")
+    
+    if format == "json":
+        return JSONResponse(result_list)
     return result_list
 
 @app.get("/auto")

@@ -1,17 +1,14 @@
 services:
   web2md:
-    image: ghcr.io/lucanori/web2md:rolling
+    image: ghcr.io/one-ring-ai/web2md:latest
     container_name: web2md
     networks:
       - web2md
     ports:
       - "7001:8000"
-    depends_on:
-      - searxng
-      - browserless
     environment:
-      - SEARXNG_URL=${SEARXNG_URL}
-      - BROWSERLESS_URL=${BROWSERLESS_URL}
+      - SEARXNG_URL=http://searxng:8888
+      - BROWSERLESS_URL=http://browserless:3000
       - BROWSERLESS_TOKEN=${BROWSERLESS_TOKEN}
       - REQUEST_TIMEOUT=30
       - MAX_IMAGES_PER_SITE=0
@@ -21,6 +18,9 @@ services:
       - AI_API_KEY=${WEB2MD_LLM_API_KEY}
       - AI_MODEL=google/gemini-2.5-flash
       - AI_BASE_URL=https://openrouter.ai/api/v1
+      - AUTO_MAX_REQUESTS=5
+      - AUTO_MAX_CONTEXT_TOKENS=850000
+      - DB_CLEANUP_RETENTION_DAYS=90
     
   searxng:
     container_name: searxng
@@ -28,8 +28,6 @@ services:
     restart: unless-stopped
     networks:
       - web2md
-    ports:
-      - "7002:8080"
     volumes:
       - ./searxng:/etc/searxng:rw
 
@@ -39,8 +37,6 @@ services:
     restart: unless-stopped
     networks:
       - web2md
-    ports:
-      - "7003:3000"
     environment:
       - TOKEN=${BROWSERLESS_TOKEN}
       - MAX_CONCURRENT_SESSIONS=10

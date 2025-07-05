@@ -30,12 +30,14 @@ RUN \
     && \
     pip install uv
 
-COPY requirements.txt main.py ./
-COPY .env
+COPY ../requirements.txt ../main.py ./
+COPY ../.env .env
 
 RUN uv pip install -r requirements.txt \
     && uv pip install watchgod \
-    && chown -R nobody:nogroup /app && chmod -R 755 /app
+    && mkdir -p /app/data \
+    && chown -R nobody:nogroup /app && chmod -R 755 /app \
+    && chmod 777 /app/data
 
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh

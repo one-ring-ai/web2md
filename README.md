@@ -52,6 +52,7 @@ Web2MD is a powerful web scraping tool that fetches search results and converts 
 - **Queue-Based Processing**: Handles concurrent auto-research requests with intelligent queuing.
 - **Cost Tracking**: Real-time cost calculation for AI API usage with OpenRouter integration.
 - **Database-Backed Storage**: SQLite database for request tracking, audit trails, and automated cleanup.
+- **Comprehensive Source References**: Both search and auto-research endpoints include structured source links from AI reranker for complete attribution tracking.
 
 ## Prerequisites
 
@@ -61,14 +62,57 @@ Ensure you have the following installed:
 - Virtualenv
 - Docker
 
-## Docker Setup
+## Quick Start with Docker (Recommended)
 
-You can use Docker to simplify the setup process. Follow these steps:
+The easiest way to get Web2MD running with all dependencies is using Docker Compose:
 
-1. **Run Docker Compose**:
+### Prerequisites
+- Docker and Docker Compose installed
+- An OpenRouter API key (or compatible LLM provider)
+
+### Setup Steps
+
+1. **Clone the repository**:
     ```sh
-    docker compose up -d
+    git clone https://github.com/lucanori/web2md.git
+    cd web2md
     ```
+
+2. **Create your environment file**:
+    ```sh
+    cp .env.example .env
+    # Edit .env and add your API key:
+    # WEB2MD_LLM_API_KEY=your_openrouter_api_key_here
+    ```
+
+3. **Start all services**:
+    ```sh
+    docker compose up
+    ```
+
+4. **Access the application**:
+    - **Web2MD API**: http://localhost:7001
+    - **SearXNG**: http://localhost:7002 
+    - **Browserless**: http://localhost:7003
+
+### Development Mode
+
+The Docker setup includes auto-reload functionality - any changes to your code will automatically restart the FastAPI application. Perfect for development!
+
+### Stop Services
+
+```sh
+docker compose down
+```
+
+### What's Included
+
+The unified Docker setup provides:
+- **🔍 SearXNG**: Metasearch engine for web searches
+- **🌐 Browserless**: Headless Chrome for web scraping
+- **⚡ FastAPI**: The main Web2MD application with auto-reload
+- **🔄 Auto-rebuild**: Code changes trigger automatic restarts
+- **📁 Volume mounting**: Live code editing without rebuilding
 
 ## Local Development Setup
 
@@ -179,6 +223,50 @@ curl "http://localhost:7001/search?q=python&num_results=5&format=json" # for JSO
 curl "http://localhost:7001/search?q=python&num_results=5" # by default Markdown
 ```
 
+#### Enhanced JSON Response Format
+
+When using `format=json`, the search endpoint now returns a structured response that includes both the processed content and the source URLs selected by the AI reranker:
+
+```json
+{
+  "content": [
+    {
+      "title": "Python Programming Guide",
+      "url": "https://example.com/python-guide",
+      "markdown_content": "# Python Programming...",
+      "images": [...]
+    }
+  ],
+  "source_references": {
+    "links": [
+      {
+        "url": "https://example.com/python-guide",
+        "title": "Python Programming Guide",
+        "relevance": "Query: python"
+      },
+      {
+        "url": "https://docs.python.org/3/",
+        "title": "Python Documentation",
+        "relevance": "Query: python"
+      }
+    ]
+  },
+  "metadata": {
+    "query": "python",
+    "num_results": 2,
+    "total_sources": 5,
+    "ai_reranked": true
+  }
+}
+```
+
+This format provides:
+- **content**: The processed markdown content from each URL
+- **source_references**: All URLs that were selected by the AI reranker
+- **metadata**: Query information and processing statistics
+
+This makes it easy for UIs to display both the content and provide proper source attribution.
+
 ### Auto-Research Endpoint (NEW)
 
 **🚀 Intelligent Multi-Step Research System**
@@ -223,6 +311,10 @@ Response when completed:
       ],
       "images": [
         {"url": "https://example.com/image.jpg", "title": "Image Title", "description": "Description"}
+      ],
+      "search_links": [
+        {"url": "https://docs.example.com/auth", "title": "Authentication Guide", "relevance": "Query: authentication"},
+        {"url": "https://blog.example.com/security", "title": "Security Best Practices", "relevance": "Query: web security"}
       ]
     },
     "metadata": {
@@ -244,6 +336,7 @@ Response when completed:
 - **⚡ Token Management**: Intelligent context management with configurable limits
 - **📈 Audit Trail**: Complete research history stored in database
 - **🧹 Auto-Cleanup**: Automatic cleanup of old research data
+- **🔗 Complete Source Tracking**: Aggregates all URLs selected by AI reranker from web searches, videos, and images
 
 ### Fetch URL Content
 
@@ -383,6 +476,7 @@ The test will process various queries and provide detailed statistics about toke
 - [x] **Cost Tracking Integration**: Real-time cost calculation with OpenRouter API integration.
 - [x] **Database Storage System**: SQLite-based storage for audit trails and automated cleanup.
 - [x] **YouTube Rate Limiting Protection**: Intelligent detection and temporary disabling to prevent IP bans.
+- [x] **Comprehensive Source Reference Integration**: Enhanced responses with structured source links from AI reranker across all endpoints (search, auto-research).
 - [ ] **Whisper STT Integration for videos**: Integrates Whisper STT for more accurate transcriptions in video search results.
 
 ## License
