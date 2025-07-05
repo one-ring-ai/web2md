@@ -1,6 +1,6 @@
 #!/bin/bash
 
-docker compose -f dev/docker-compose.yaml up -d searxng browserless
+docker compose -f docker-compose.yaml up -d searxng browserless
 
 echo "SearXNG is running at http://localhost:7002"
 echo "Browserless is running at http://localhost:7003"

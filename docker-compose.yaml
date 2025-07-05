@@ -1,6 +1,6 @@
 services:
   web2md:
-    image: ghcr.io/lucanori/web2md:latest
+    image: ghcr.io/one-ring-ai/web2md:latest
     container_name: web2md
     networks:
       - web2md
@@ -10,17 +10,17 @@ services:
       - searxng
       - browserless
     environment:
-      - SEARXNG_URL=${SEARXNG_URL}
-      - BROWSERLESS_URL=${BROWSERLESS_URL}
+      - SEARXNG_URL=http://searxng:8888
+      - BROWSERLESS_URL=http://browserless:3000
       - BROWSERLESS_TOKEN=${BROWSERLESS_TOKEN}
-      - REQUEST_TIMEOUT=${REQUEST_TIMEOUT}
-      - MAX_IMAGES_PER_SITE=${MAX_IMAGES_PER_SITE}
-      - MIN_IMAGE_SIZE=${MIN_IMAGE_SIZE}
-      - MAX_TOKENS_PER_REQUEST=${MAX_TOKENS_PER_REQUEST}
-      - FILTER_SEARCH_RESULT_BY_AI=${FILTER_SEARCH_RESULT_BY_AI}
-      - AI_API_KEY=${AI_API_KEY}
-      - AI_MODEL=${AI_MODEL}
-      - AI_BASE_URL=${AI_BASE_URL}
+      - REQUEST_TIMEOUT=30
+      - MAX_IMAGES_PER_SITE=0
+      - MIN_IMAGE_SIZE=256
+      - MAX_TOKENS_PER_REQUEST=100000
+      - FILTER_SEARCH_RESULT_BY_AI=true
+      - AI_API_KEY=${WEB2MD_LLM_API_KEY}
+      - AI_MODEL=google/gemini-2.5-flash
+      - AI_BASE_URL=https://openrouter.ai/api/v1
     
   searxng:
     container_name: searxng

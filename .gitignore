@@ -1,13 +1,53 @@
+# Python
 .Python
 *.so
 *.pyc
 *.pyo
 *.pyd
-__pycache__
+__pycache__/
+*.egg-info/
+dist/
+build/
+
+# Environment files
 .env
+.env.*
+dev/.env
 /.venv
 /venv
 /env
 /ENV
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+web2md.db
+dev/web2md.db
+
+# Config files
 settings.yml.new
 uwsgi.ini.new
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Test files
+test_*.py
+*_test.py
+
+# Temporary files
+tmp/
+temp/
+*.tmp

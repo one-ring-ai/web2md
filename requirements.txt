@@ -7,6 +7,7 @@ openai
 beautifulsoup4
 html2text
 youtube-transcript-api
+schedule
 # ballyregan
 # typer==0.6.1
 # rich==12.6.0

@@ -4,7 +4,7 @@
 
 ## Description
 
-Web2MD is a powerful web scraping tool that fetches search results and converts web content into clean Markdown format using FastAPI, SearXNG, and Browserless. It includes the capability to use proxies for web scraping and handles HTML content conversion to Markdown efficiently. Features AI Integration for filtering search results using OpenAI-compatible APIs. Alternatives include Jina.ai, FireCrawl AI, Exa AI, and 2markdown, offering various web scraping and search engine solutions for developers.
+Web2MD is a powerful web scraping tool that fetches search results and converts web content into clean Markdown format using FastAPI, SearXNG, and Browserless. It includes advanced AI Integration for filtering search results using OpenAI-compatible APIs, intelligent auto-research capabilities, and comprehensive media processing. Features include proxy support for web scraping, efficient HTML to Markdown conversion, and an advanced auto-research system that can intelligently gather information from multiple sources. Alternatives include Jina.ai, FireCrawl AI, Exa AI, and 2markdown, offering various web scraping and search engine solutions for developers.
 
 ## Table of Contents
 - [Web2MD - Web Content to Markdown Converter](#web2md---web-content-to-markdown-converter)
@@ -17,6 +17,7 @@ Web2MD is a powerful web scraping tool that fetches search results and converts 
   - [Local Development Setup](#local-development-setup)
   - [Usage](#usage)
     - [Search Endpoint](#search-endpoint)
+    - [Auto-Research Endpoint (NEW)](#auto-research-endpoint-new)
     - [Fetch URL Content](#fetch-url-content)
     - [Fetching Images](#fetching-images)
     - [Fetching Videos](#fetching-videos)
@@ -41,11 +42,16 @@ Web2MD is a powerful web scraping tool that fetches search results and converts 
 - **Browserless**: A web browser automation service.
 - **Markdown Output**: Converts HTML content to Markdown format.
 - **Proxy Support**: Utilizes proxies for secure and anonymous scraping.
-- **AI Integration (Reranker AI)**: Filters search results using AI to provide the most relevant content.
-- **YouTube Transcriptions**: Fetches YouTube video transcriptions.
-- **Image and Video Search**: Fetches images and video results using SearXNG.
+- **Advanced AI Integration**: Filters and reranks search results using AI to provide the most relevant content.
+- **YouTube Transcriptions**: Fetches YouTube video transcriptions for enhanced content analysis.
+- **AI-Enhanced Media Search**: AI-powered reranking for both images and video results with transcript analysis.
+- **Auto-Research System (NEW)**: Intelligent multi-step research that autonomously decides when to gather more information from different sources.
+- **YouTube Rate Limiting Protection**: Intelligent detection and temporary disabling of video endpoints to prevent IP bans.
 - **Token Usage Control**: Configurable limits for images and content to manage token consumption.
 - **Development Environment**: Separate dev environment with dedicated scripts and configuration.
+- **Queue-Based Processing**: Handles concurrent auto-research requests with intelligent queuing.
+- **Cost Tracking**: Real-time cost calculation for AI API usage with OpenRouter integration.
+- **Database-Backed Storage**: SQLite database for request tracking, audit trails, and automated cleanup.
 
 ## Prerequisites
 
@@ -127,9 +133,14 @@ For local development, we recommend using `uv` (a fast Python package manager) i
 
     # AI Integration for search result filter (OpenAI-compatible APIs)
     FILTER_SEARCH_RESULT_BY_AI=true
-    AI_API_KEY=your_api_key_here
+    WEB2MD_LLM_API_KEY=your_api_key_here
     AI_MODEL=google/gemini-2.5-flash
     AI_BASE_URL=https://openrouter.ai/api/v1
+
+    # Auto-research feature settings
+    AUTO_MAX_REQUESTS=5
+    AUTO_MAX_CONTEXT_TOKENS=850000
+    DB_CLEANUP_RETENTION_DAYS=90
 
     # Examples for different providers:
     # OpenAI: AI_BASE_URL=https://api.openai.com/v1
@@ -160,13 +171,79 @@ For local development, we recommend using `uv` (a fast Python package manager) i
 
 ### Search Endpoint
 
-To perform a search query, send a GET request to the root endpoint `/` with the query parameters `q` (search query), `num_results` (number of results), and `format` (get response in JSON or by default in Markdown).
+To perform a search query, send a GET request to the `/search` endpoint with the query parameters `q` (search query), `num_results` (number of results), and `format` (get response in JSON or by default in Markdown).
 
 Example:
 ```sh
-curl "http://localhost:7001/?q=python&num_results=5&format=json" # for JSON format
-curl "http://localhost:7001/?q=python&num_results=5" # by default Markdown
+curl "http://localhost:7001/search?q=python&num_results=5&format=json" # for JSON format
+curl "http://localhost:7001/search?q=python&num_results=5" # by default Markdown
 ```
+
+### Auto-Research Endpoint (NEW)
+
+**🚀 Intelligent Multi-Step Research System**
+
+The auto-research endpoint provides an advanced AI-powered research system that can autonomously gather comprehensive information from multiple sources. The system intelligently decides when and how to collect more information based on the user's query.
+
+#### How It Works:
+1. **Initial Search**: Always starts with a web search to gather basic information
+2. **AI Decision Making**: Uses AI to analyze if more information is needed
+3. **Multi-Source Gathering**: Can automatically search videos, images, or additional web content
+4. **Smart Stopping**: AI decides when sufficient information has been collected
+5. **Comprehensive Response**: Generates a well-structured markdown response with media references
+
+#### Starting Auto-Research:
+```sh
+curl "http://localhost:7001/auto?q=how+to+implement+authentication+in+web+applications"
+```
+
+Response:
+```json
+{
+  "request_id": "unique-uuid-here",
+  "status": "queued", 
+  "check_endpoint": "/auto/status/unique-uuid-here"
+}
+```
+
+#### Checking Status/Getting Results:
+```sh
+curl "http://localhost:7001/auto/status/unique-uuid-here"
+```
+
+Response when completed:
+```json
+{
+  "status": "completed",
+  "result": {
+    "markdown_response": "# Complete Research Response\n\n...",
+    "media_references": {
+      "videos": [
+        {"url": "https://youtube.com/...", "title": "Tutorial Title", "relevance": "Query context"}
+      ],
+      "images": [
+        {"url": "https://example.com/image.jpg", "title": "Image Title", "description": "Description"}
+      ]
+    },
+    "metadata": {
+      "total_requests_used": 3,
+      "endpoints_called": ["search", "videos", "images"],
+      "queries_used": ["original query", "adapted video query", "adapted image query"],
+      "total_tokens": 45231
+    },
+    "websearch_price": 0.0085
+  }
+}
+```
+
+#### Auto-Research Features:
+- **🧠 AI-Driven Decisions**: Automatically determines optimal research strategy
+- **📊 Cost Tracking**: Real-time cost calculation from OpenRouter API
+- **🔄 Queue System**: Handles multiple concurrent requests efficiently
+- **📱 UI-Ready Output**: Separate media references for easy web integration
+- **⚡ Token Management**: Intelligent context management with configurable limits
+- **📈 Audit Trail**: Complete research history stored in database
+- **🧹 Auto-Cleanup**: Automatic cleanup of old research data
 
 ### Fetch URL Content
 
@@ -180,22 +257,61 @@ curl "http://localhost:7001/r/https://example.com" # by default Markdown
 
 ### Fetching Images
 
-To fetch image search results, send a GET request to the `/images` endpoint with the query parameters `q` (search query) and `num_results` (number of results).
-Note that you have to enable image processing in the `.env` file.
+To fetch AI-enhanced image search results, send a GET request to the `/images` endpoint with the query parameters `q` (search query) and `num_results` (number of results). The system now includes AI reranking for more relevant results.
 
 Example:
 ```sh
-curl "http://localhost:7001/images?q=puppies&num_results=5"
+curl "http://localhost:7001/images?q=python+programming+diagram&num_results=5"
 ```
 
 ### Fetching Videos
 
-To fetch video search results, send a GET request to the `/videos` endpoint with the query parameters `q` (search query) and `num_results` (number of results).
+To fetch AI-enhanced video search results with transcript analysis, send a GET request to the `/videos` endpoint with the query parameters `q` (search query), `num_results` (number of results), and optionally `format` for output format.
+
+The videos endpoint now features:
+- **AI Reranking**: Videos ranked by transcript content relevance
+- **Multiple Formats**: metadata (default), transcripts, or json
+- **Transcript Integration**: Uses actual video content for better matching
+- **Rate Limiting Protection**: Automatic detection and prevention of YouTube IP bans
 
 Example:
 ```sh
-curl "http://localhost:7001/videos?q=cooking+recipes&num_results=5"
+curl "http://localhost:7001/videos?q=python+machine+learning+tutorial&num_results=5&format=transcripts"
 ```
+
+### YouTube Rate Limiting Protection
+
+Web2MD includes intelligent protection against YouTube rate limiting to prevent permanent IP bans:
+
+#### How It Works:
+- **Automatic Detection**: Recognizes YouTube rate limiting error messages
+- **Smart Disabling**: Temporarily disables video endpoints for 1 hour when rate limited
+- **Auto-Recovery**: Automatically re-enables video functionality after cooldown period
+- **LLM Integration**: Informs the auto-research AI when videos are unavailable
+
+#### Checking Video Status:
+```sh
+curl "http://localhost:7001/status/videos"
+```
+
+Response when disabled:
+```json
+{
+  "videos_disabled": true,
+  "cooldown_remaining_seconds": 2847,
+  "cooldown_remaining_minutes": 47,
+  "reason": "YouTube rate limiting protection",
+  "status": "disabled"
+}
+```
+
+#### Protected Scenarios:
+- Direct video endpoint calls (`/videos`)
+- Auto-research video searches
+- Video transcript fetching
+- AI reranking with transcript analysis
+
+This protection ensures your IP doesn't get permanently banned from YouTube, especially important when running on cloud providers (AWS, GCP, Azure) which are commonly blocked by YouTube.
 
 ## Token Usage Control
 
@@ -206,6 +322,7 @@ Web2MD includes configurable limits to manage token consumption when processing 
 - `MAX_IMAGES_PER_SITE=3` - Maximum number of images to process per website (set to 0 to disable images completely)
 - `MIN_IMAGE_SIZE=256` - Minimum image size in pixels (256x256px) to filter out small icons and decorative images
 - `MAX_TOKENS_PER_REQUEST=100000` - Maximum tokens per request before content is truncated, useful for llms
+- `AUTO_MAX_CONTEXT_TOKENS=850000` - Maximum tokens for auto-research context (with 50k tolerance)
 
 ### Token Usage Estimates
 
@@ -220,6 +337,11 @@ Based on our testing with 20 different queries, here are rough estimates for tok
 - Average: ~19,100 tokens per query
 - Range: 3,700 - 48,300 tokens
 - Examples: Programming tutorials, API documentation, technical guides
+
+**Auto-Research System**:
+- Intelligent token management with configurable limits
+- Context truncation when approaching limits
+- Real-time token counting for optimal resource usage
 
 **Important Notes:**
 - These are rough estimates and token usage can vary significantly
@@ -251,10 +373,16 @@ The test will process various queries and provide detailed statistics about toke
 - [x] **Proxy Support**: Utilizes proxies for secure and anonymous scraping.
 - [x] **AI Integration (Reranker AI)**: Filters search results using AI to provide the most relevant content.
 - [x] **YouTube Transcriptions**: Fetches YouTube video transcriptions.
-- [x] **Image and Video Search**: Fetches images and video results using SearXNG.
+- [x] **AI-Enhanced Media Search**: AI reranking for images and video results with transcript analysis.
+- [x] **Auto-Research System**: Intelligent multi-step research with AI decision-making.
 - [x] **Token Usage Control**: Configurable limits for images and content to manage token consumption.
 - [x] **Development Environment**: Separate dev environment with dedicated scripts and configuration.
 - [x] **Token Usage Testing**: Automated testing suite to measure and analyze token consumption patterns.
+- [x] **Search Endpoint Restructure**: Moved main search from "/" to "/search" for better API organization.
+- [x] **Queue-Based Processing**: Concurrent request handling with intelligent queuing system.
+- [x] **Cost Tracking Integration**: Real-time cost calculation with OpenRouter API integration.
+- [x] **Database Storage System**: SQLite-based storage for audit trails and automated cleanup.
+- [x] **YouTube Rate Limiting Protection**: Intelligent detection and temporary disabling to prevent IP bans.
 - [ ] **Whisper STT Integration for videos**: Integrates Whisper STT for more accurate transcriptions in video search results.
 
 ## License

@@ -1,5 +1,5 @@
 #!/bin/bash
 
-docker compose -f dev/docker-compose.yaml down
+docker compose -f docker-compose.yaml down
 
 echo "Development services stopped."
