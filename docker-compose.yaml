@@ -21,6 +21,9 @@ services:
       - AI_API_KEY=${WEB2MD_LLM_API_KEY}
       - AI_MODEL=google/gemini-2.5-flash
       - AI_BASE_URL=https://openrouter.ai/api/v1
+      - AUTO_MAX_REQUESTS=5
+      - AUTO_MAX_CONTEXT_TOKENS=850000
+      - DB_CLEANUP_RETENTION_DAYS=90
     
   searxng:
     container_name: searxng
