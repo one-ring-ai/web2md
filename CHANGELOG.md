@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/one-ring-ai/web2md/compare/v1.2.1...v1.3.0) (2025-07-05)
+
+
+### Features
+
+* add YouTube rate limiting protection and optimize AI reranking performance ([94eee68](https://github.com/one-ring-ai/web2md/commit/94eee6814c946520602c91838b3b4aa1adc251d3))
+
 ## [1.2.1](https://github.com/one-ring-ai/web2md/compare/v1.2.0...v1.2.1) (2025-07-04)
 
 
