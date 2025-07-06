@@ -6,6 +6,8 @@ services:
       - web2md
     ports:
       - "7001:8000"
+    volumes:
+      - ./appdata:/app/data
     environment:
       - SEARXNG_URL=http://searxng:8888
       - BROWSERLESS_URL=http://browserless:3000

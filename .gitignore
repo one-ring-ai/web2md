@@ -24,6 +24,7 @@ dev/.env
 *.sqlite3
 web2md.db
 dev/web2md.db
+appdata/
 
 # Config files
 settings.yml.new
