@@ -1,79 +1,27 @@
-name: Generate Release Changelog PR
+name: Generate Release Changelog
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
-  workflow_dispatch:
+  release:
+    types: [ released ]
 
 jobs:
-  generate-release-changelog-pr:
-    permissions:
-      contents: write
-      pull-requests: write
+  generate-release-changelog:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Update CHANGELOG
+        id: changelog
+        uses: requarks/changelog-action@v1
         with:
-          fetch-depth: 0
+          token: ${{ github.token }}
+          tag: ${{ github.ref_name }}
 
-      - name: Generate Release Changelog
-        id: generate_release
-        uses: mikepenz/release-changelog-builder-action@v5.1.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Commit CHANGELOG.md
+        uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          configuration: ".github/configuration-release.json"
-          owner: ${{ github.repository_owner }}
-          repo: ${{ github.event.repository.name }}
-          outputFile: CHANGELOG-release.md
-
-      - name: Update CHANGELOG.md
-        run: |
-          TAG=${GITHUB_REF##*/}
-          echo "Using release tag: $TAG"
-          
-          if [ ! -f CHANGELOG.md ]; then
-            echo "# Changelog" > CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            echo "All notable changes to this project will be documented in this file." >> CHANGELOG.md
-            echo "" >> CHANGELOG.md
-          fi
-
-          echo "Updating CHANGELOG.md…"
-          
-          if grep -q "^## \[Unreleased\]" CHANGELOG.md; then
-            awk '/^## \[Unreleased\]/{flag=1} flag && /^---/{flag=0; next} !flag' CHANGELOG.md > CHANGELOG.cleaned
-          else
-            cp CHANGELOG.md CHANGELOG.cleaned
-          fi
-
-          awk '/^## \[v/{exit} {print}' CHANGELOG.cleaned > header.md
-          awk 'f{print} /^## \[v/{f=1; print}' CHANGELOG.cleaned > tail.md
-
-          echo "Combining updated changelog parts..."
-          cat header.md CHANGELOG-release.md > CHANGELOG.md.new
-          echo "" >> CHANGELOG.md.new
-          cat tail.md >> CHANGELOG.md.new
-
-          mv CHANGELOG.md.new CHANGELOG.md
-
-          rm -f CHANGELOG.cleaned header.md tail.md CHANGELOG-release.md
-
-          echo "Final CHANGELOG.md content:"
-          cat CHANGELOG.md
-
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          sign-commits: true
-          commit-message: "chore: update CHANGELOG for release ${{ github.ref_name }}"
-          base: main
-          branch: "changelog/${{ github.ref_name }}"
-          reviewers: danny-avila
-          title: "📜 docs: Changelog for release ${{ github.ref_name }}"
-          body: |
-            **Description**:
-            - This PR updates the CHANGELOG.md by removing the "Unreleased" section and adding new release notes for release ${{ github.ref_name }} above previous releases.
+          branch: main
+          commit_message: 'docs: update CHANGELOG.md for ${{ github.ref_name }}'
+          file_pattern: CHANGELOG.md
