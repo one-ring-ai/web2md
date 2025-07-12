@@ -15,9 +15,8 @@ jobs:
     permissions:
       contents: read
       packages: write
-      # Required for build attestations (commented out for private repos)
-      # attestations: write
-      # id-token: write
+      attestations: write
+      id-token: write
 
     steps:
       - name: Checkout
@@ -55,7 +54,7 @@ jobs:
             type=semver,pattern={{major}}
           labels: |
             org.opencontainers.image.title=${{ github.repository }}
-            org.opencontainers.image.description=Web to Markdown converter service
+            org.opencontainers.image.description=One Ring: All-In-One GenAI Dashboard
             org.opencontainers.image.vendor=OneRing AI
 
       - name: Build and push Docker image
@@ -63,10 +62,13 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NODE_OPTIONS=--max-old-space-size=4096
+            BUILDKIT_INLINE_CACHE=1
           cache-from: |
             type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
           cache-to: |
@@ -74,15 +76,13 @@ jobs:
           provenance: false
           sbom: false
 
-      # Build attestation is not supported for organization private repositories
-      # Uncomment this section if/when the repository becomes public or uses GitHub Enterprise
-      # - name: Generate build attestation
-      #   uses: actions/attest-build-provenance@v1
-      #   id: attest
-      #   with:
-      #     subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-      #     subject-digest: ${{ steps.build.outputs.digest }}
-      #     push-to-registry: true
+      - name: Generate build attestation
+        uses: actions/attest-build-provenance@v1
+        id: attest
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
 
       # Optional: Update Docker Hub as well
       # - name: Build and publish to Docker Hub
