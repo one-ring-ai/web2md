@@ -64,6 +64,7 @@ jobs:
 
       - name: Build and push Docker image
         uses: docker/bake-action@v5
+        id: build
         with:
           files: |
             ./docker-bake.hcl
