@@ -15,7 +15,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-      # Required for build attestations (commented out for private repos)
+      # For private organization repositories, comment out the next two lines:
       attestations: write
       id-token: write
 
@@ -63,7 +63,7 @@ jobs:
             ${{ steps.meta.outputs.bake-file }}
 
       - name: Build and push Docker image
-        uses: docker/bake-action@v5
+        uses: docker/bake-action@v6
         id: build
         with:
           files: |
@@ -74,16 +74,10 @@ jobs:
           set: |
             image-all.cache-from=type=gha
             image-all.cache-to=type=gha,mode=max
-
-      # Build attestation is not supported for organization private repositories
-      # Uncomment this section if/when the repository becomes public or uses GitHub Enterprise
-      - name: Generate build attestation
-        uses: actions/attest-build-provenance@v1
-        id: attest
-        with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          subject-digest: ${{ steps.build.outputs.digest }}
-          push-to-registry: true
+            *.attest=type=provenance,mode=max
+            *.attest=type=sbom
+          
+          # For private organization repositories, comment out the attestation lines in the set: section above
 
       # Optional: Update Docker Hub as well
       # - name: Build and publish to Docker Hub
