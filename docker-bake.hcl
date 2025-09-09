@@ -1,7 +1,7 @@
 target "docker-metadata-action" {}
 
 variable "SOURCE" {
-  default = "https://github.com/lucanori/web2md"
+  default = "https://github.com/one-ring-ai/web2md"
 }
 
 group "default" {
@@ -24,6 +24,7 @@ target "image-all" {
   inherits = ["image"]
   platforms = [
     "linux/amd64",
-    "linux/arm64"
+    "linux/arm64",
+    "linux/arm/v7"
   ]
 }

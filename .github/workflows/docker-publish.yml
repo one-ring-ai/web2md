@@ -11,10 +11,11 @@ env:
 jobs:
   docker_publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: read
       packages: write
+      # Required for build attestations (commented out for private repos)
       attestations: write
       id-token: write
 
@@ -54,28 +55,27 @@ jobs:
             type=semver,pattern={{major}}
           labels: |
             org.opencontainers.image.title=${{ github.repository }}
-            org.opencontainers.image.description=One Ring: All-In-One GenAI Dashboard
-            org.opencontainers.image.vendor=OneRing AI
+            org.opencontainers.image.description=Reminder Bot
+            org.opencontainers.image.vendor=${{ github.repository_owner }}
+          bake-target: docker-metadata-action
+          bake-file: |
+            ./docker-bake.hcl
+            ${{ steps.meta.outputs.bake-file }}
 
       - name: Build and push Docker image
-        id: build
-        uses: docker/build-push-action@v5
+        uses: docker/bake-action@v4
         with:
-          context: .
-          platforms: linux/amd64
+          files: |
+            ./docker-bake.hcl
+            ${{ steps.meta.outputs.bake-file }}
+          targets: image-all
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            NODE_OPTIONS=--max-old-space-size=4096
-            BUILDKIT_INLINE_CACHE=1
-          cache-from: |
-            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
-          cache-to: |
-            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
-          provenance: false
-          sbom: false
+          set: |
+            image-all.cache-from=type=gha
+            image-all.cache-to=type=gha,mode=max
 
+      # Build attestation is not supported for organization private repositories
+      # Uncomment this section if/when the repository becomes public or uses GitHub Enterprise
       - name: Generate build attestation
         uses: actions/attest-build-provenance@v1
         id: attest
