@@ -66,6 +66,7 @@ jobs:
         uses: docker/bake-action@v6
         id: build
         with:
+          source: .
           files: |
             ./docker-bake.hcl
             ${{ steps.meta.outputs.bake-file }}
