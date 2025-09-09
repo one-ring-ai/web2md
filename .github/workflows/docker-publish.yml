@@ -63,7 +63,7 @@ jobs:
             ${{ steps.meta.outputs.bake-file }}
 
       - name: Build and push Docker image
-        uses: docker/bake-action@v4
+        uses: docker/bake-action@v5
         with:
           files: |
             ./docker-bake.hcl
