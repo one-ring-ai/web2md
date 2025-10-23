@@ -8,3 +8,4 @@ beautifulsoup4
 html2text
 youtube-transcript-api
 schedule
+starlette>=0.40.0 # not directly required, pinned by Snyk to avoid a vulnerability
